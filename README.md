@@ -2,11 +2,23 @@
 
 Prototype for the Netchex Applied AI take-home. One thing, built deeply: **an AI-assisted triage queue for expense approvals** — the assistant does the investigation, the human makes the decision.
 
-**Live demo:** https://flowco-two.vercel.app — click **Run assistant triage** and watch the queue sort itself; open **EXP-1008** for the case the assistant can't resolve on its own. (`/submit` is the optional employee side.) The demo resets to seed data via the **Reset** button.
+**Live demo:** https://flowco-two.vercel.app — click **Run assistant triage** and watch the queue sort itself. Open **EXP-1013 (The Cape Goa)** for the showpiece: a real ₹16,823 team-dinner receipt where the assistant finds an alcohol line policy says isn't reimbursable, deducts it plus its VAT, and hands the approver the exact reimbursable amount. (`/submit` is the optional employee side.) The demo resets to seed data via the **Reset** button.
 
 ## The product idea in one paragraph
 
-Today FlowCo's approver does archaeology on every flagged expense: squint at a receipt, cross-reference a policy doc, search a spreadsheet for duplicates, email the employee, wait, re-review. The AI's job here is **not to approve or reject** — it's to compress "digging" into "deciding." Every expense arrives with the investigation already done: receipt read (including handwritten tips), policy math computed, duplicates compared, and a drafted message to the employee when something's missing. Clean cases pool in a one-click lane; ambiguous cases arrive with the evidence laid out and an explicit list of *what the assistant could not resolve*.
+Today FlowCo's approver does archaeology on every flagged expense: squint at a receipt, cross-reference a policy doc, search a spreadsheet for duplicates, email the employee, wait, re-review. The AI's job here is **not to approve or reject** — it's to compress "digging" into "deciding." Every expense arrives with the investigation already done: receipt read (including handwritten tips and alcohol lines), policy math computed, foreign currency reconciled, duplicates compared, and a drafted message to the employee when something's missing. Clean cases pool in a one-click lane; ambiguous cases arrive with the evidence laid out and an explicit list of *what the assistant could not resolve*.
+
+## Real receipts, real edge cases
+
+The hard cases in the demo are **real receipts** — crumpled, shadowed phone photos from an actual team offsite in Goa, in rupees with local GST/VAT. They are what convinced me the model earns its place, because each one hits a triage category a rules engine cannot:
+
+| Case | Receipt | Why only the model can catch it |
+|---|---|---|
+| **The Cape Goa** (EXP-1013) | ₹16,823 team dinner | Contains one alcohol line ("Goan Mudslide (Absolut)", ₹935 + its own 22% VAT). **No structured field says "alcohol"** — only reading the receipt reveals it. The assistant deducts ₹1,140.70 and reports the reimbursable **$187.84**. |
+| **Artjuna** (EXP-1014/1015) | Two consecutive bills | Same table, same 14:07 timestamp, same cashier, different items — a legitimate **split of one big group breakfast**, not a double-submission. The assistant compares them and says so. |
+| **Padaria** (EXP-1016) | ₹1,080 bakery pickup | Clean and itemized; the assistant recommends approve and flags only the one thing code can't verify — the **INR→USD rate**. |
+
+The clean domestic (USD) receipts auto-clear; the real foreign receipts with alcohol/splits get the full investigation and route to a human. That split is the product.
 
 ## Running it
 
@@ -32,28 +44,31 @@ data/policy.json           │
               │                              presence, currency (pure code)
               │
               ├─ lib/triage.ts ───────────── Claude (claude-opus-4-8): reads the
-              │                              receipt image, reconciles it against
-              │                              the claim, explains, drafts messages.
+              │                              receipt image, finds alcohol/non-
+              │                              reimbursable lines, reconciles FX and
+              │                              claim, explains, drafts messages.
               │                              Output is schema-constrained
               │                              (structured outputs + zod).
               │
               └─ routing guardrail ────────── code, not vibes: any failed/warned
-                                             check, model uncertainty, or receipt
-                                             mismatch ⇒ needs_human. The model can
+                                             check, model uncertainty, receipt
+                                             mismatch, alcohol found, or foreign
+                                             currency ⇒ needs_human. The model can
                                              tighten routing, never loosen it.
 ```
+(Store is Supabase in the deployed demo, in-memory locally — chosen by env vars.)
 
 ### Design decisions worth noticing
 
-1. **Deterministic code for money, LLM for judgment.** Policy-cap math, duplicate candidate detection, and amount limits are pure functions. The model never does arithmetic on money — it reads receipts, reconciles, explains, and drafts.
-2. **The model cannot approve its way past a failed check.** The guardrail in `lib/triage.ts` only lets the model make routing *stricter*. Auto-clear requires every deterministic check to pass *and* the model to be confident *and* the receipt to reconcile.
+1. **Deterministic code for money and metadata, LLM for judgment.** Policy-cap math, duplicate candidate detection, amount limits, and currency-mismatch flags are pure functions. The model never does arithmetic the code can do — it reads receipts, finds alcohol/non-reimbursable lines, reconciles foreign currency, explains, and drafts. The clearest proof: **a "no alcohol" check is impossible in code** (nothing in the structured claim says what was ordered), so it's entirely the model's job — and the routing guardrail refuses to auto-clear any receipt where the model found alcohol.
+2. **The model cannot approve its way past a failed check.** The guardrail in `lib/triage.ts` only lets the model make routing *stricter*. Auto-clear requires every deterministic check to pass, the model to be confident, the receipt to reconcile, no non-reimbursable items, and no unverifiable FX. (This is the fix for the original failure story — see `docs/failure-story/`.)
 3. **"What the assistant couldn't resolve" is a first-class output field.** The schema forces the model to enumerate its own uncertainty instead of papering over it — that list is the heart of the triage UI.
-4. **Every AI action is audited.** The verdict, engine, model, and rationale land in an audit trail on each expense.
-5. **The employee side reuses the same engine.** One extraction+reconciliation engine, two surfaces (approver triage, conversational submit).
+4. **Line-item reconciliation is the signature.** When money must come off (alcohol, FX), the evidence panel shows a ledger — Claimed → deductions → Reimburse — so the approver sees the reduced amount, not just a flag.
+5. **Every AI action is audited**, and the **employee side reuses the same engine** — one extraction+reconciliation engine, two surfaces (approver triage, conversational submit).
 
 ### Deliberately not built
 
-Auth, real email/Slack sends, payroll integration, editable policy, persistence, mobile. Receipt images are synthetic (generated with Playwright — see `scripts/generate-receipts.mjs`), including the deliberately tricky ones: a handwritten tip that changes the total, a EUR hotel folio, and a same-day identical-fare Uber pair.
+Auth, real email/Slack sends, payroll integration, editable policy, mobile. The clean domestic receipts are synthetic (generated with Playwright — `scripts/generate-receipts.mjs`), including the deliberately tricky handwritten-tip case and a same-day identical-fare Uber pair. The hard cases use **real** receipt photos.
 
 ### Deployment notes (Vercel + Supabase)
 

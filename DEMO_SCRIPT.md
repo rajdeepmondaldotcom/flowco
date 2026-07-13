@@ -1,6 +1,6 @@
 # 5-minute recording script
 
-> Before recording: open https://flowco-two.vercel.app (or `npm run dev` locally), click **Reset**. Have `docs/failure-story/04-...GRAY-ZONE.md` open in a second tab. Close everything else. Target 4:45 — they said 5 max. Bonus closing line: "it's deployed — the link's in the email, try the queue yourself."
+> Before recording: open https://flowco-two.vercel.app (or `npm run dev` locally), click **Reset**. Have `docs/failure-story/04-...GRAY-ZONE.md` open in a second tab. Close everything else. Target 4:45 — they said 5 max. Bonus closing line: "it's deployed — the link's in the email, try the queue yourself." The single most important beat is **EXP-1013 (The Cape Goa)** — the real receipt where the model finds alcohol code can't see. Lead with it if you only have time for one.
 
 ## 0:00–0:30 — Why this slice
 
@@ -14,12 +14,15 @@
 3. Point at the two lanes forming: "Seven landed in *Ready to clear* — every check passed and the model found nothing to question. Note the one with **no receipt at all** that still cleared: parking under $25, and policy says receipts are only required above $25. The assistant knows the policy nuance instead of blindly flagging."
 4. Open one clear case briefly — show the reconciliation (printed total = claimed total) — then **Approve all (7)**. "Seven decisions, one click, full audit trail."
 
-## 2:00–3:30 — The case the assistant can't resolve (the point of the exercise)
+## 2:00–3:30 — Real receipts, the cases only the model can crack (the point of the exercise)
 
-1. Open **EXP-1008 — Harvest Table**. "Claimed $85.00. Every deterministic check passes — this is under the cap, receipt attached, no duplicates. A rules engine clears it. But look at what the model did with the receipt."
-2. Point at the reconciliation card: printed total **$76.20**, scrawled handwritten tip it reads as **$8.30**, its read of what was paid **$84.50**, delta **$0.50** in red. "It read the handwriting off a blurry receipt, did the reconciliation, and caught a fifty-cent overclaim no deterministic check could see — then routed it to me instead of deciding, and told me *specifically* what it couldn't resolve: is that scrawl an $8.30 tip or the $8.80 the employee claims?"
-3. Show "What the assistant couldn't resolve" list + the pre-drafted employee message. Edit one word, click **Send & mark info requested**. "Requesting info costs me five seconds, not a composed email."
-4. Quickly show the other flag types in the lane: the $212 client dinner over the meals cap ("policy explicitly makes exceptions the approver's discretion — the AI lays out per-person math and the business purpose, then hands me the call"), and the identical Uber pair ("same employee, same fare, same day — deterministic detection flags it, the model compares the receipts and points out the different trip times; duplicates never auto-clear").
+"The clean lane was synthetic. The hard lane is real — these are actual receipts from a team offsite in Goa: crumpled phone photos, in rupees, with local taxes. This is where a rules engine falls over and the model earns its place."
+
+1. **The star — open EXP-1013, The Cape Goa (₹16,823 team dinner).** "Deterministic checks flag it's over the meals cap and in a foreign currency — but watch the top." Point at the **reconciliation ledger**: Claimed **$201.50** → less non-reimbursable **−$13.66** → **Reimburse $187.84**. "The model read a real, angled rupee receipt, found one line — 'Goan Mudslide (Absolut)' — recognized it as alcohol, which FlowCo policy says isn't reimbursable, added its *separate* 22% VAT, and handed me the exact amount to pay. **Nothing in the structured expense data says 'alcohol' — the only way to catch this is to read the receipt.** That's the whole thesis in one screen: code does the math it can, the model does the judgment it can't." Scroll to show the struck-through alcohol line and the FX sanity-check.
+2. **The duplicate — open EXP-1014/1015, Artjuna.** "Same employee, same restaurant, same day — flagged as a possible duplicate. But the model compared the two bills: consecutive bill numbers, same 14:07 table, *different items*. It concludes this is a legit split of one big group breakfast, not a double-submission, and lays out that evidence so I decide in seconds." (This is the PDF's exact 'possible duplicate → check the spreadsheet' case, automated.)
+3. **The honest one — EXP-1016, Padaria.** "Real messy receipt, and the model recommends *approve* — it says everything checks out and flags only the one thing it genuinely can't verify: the exact INR→USD rate. It's not flagging for the sake of flagging."
+4. Show the pre-drafted employee message on one of them, edit a word, **Send & mark info requested**. "Five seconds, not a composed email."
+5. If time: **EXP-1008 — Harvest Table** (the synthetic failure-story case): "$0.50 overclaim on a handwritten tip — the case that broke my first version. Now it routes correctly every time. That's the fix, live."
 
 ## 3:30–4:30 — How I built it + where the model got it wrong
 

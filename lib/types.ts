@@ -91,6 +91,28 @@ export interface ReceiptExtraction {
   legibilityConfidence: "high" | "medium" | "low";
 }
 
+// Line items the receipt shows that policy says FlowCo won't reimburse (e.g.
+// alcohol). Deterministic code can't find these — they're only visible by
+// reading the receipt — so this is entirely the model's contribution.
+export interface NonReimbursable {
+  items: { description: string; amount: number }[];
+  subtotalExcluded: number; // includes any tax attributable to these items
+  currency: string;
+  note: string;
+}
+
+// When the receipt currency differs from the claim currency, the model does
+// the FX reconciliation code can't (rates aren't in the app).
+export interface CurrencyReconciliation {
+  receiptCurrency: string;
+  receiptTotal: number | null;
+  claimCurrency: string;
+  claimedTotal: number;
+  impliedRate: number | null; // claimedTotal per 1 receiptCurrency unit
+  plausible: boolean;
+  note: string;
+}
+
 export type RecommendedAction = "approve" | "reject" | "request_info";
 
 export interface TriageVerdict {
@@ -103,6 +125,13 @@ export interface TriageVerdict {
     extractedTotal: number | null;
     note: string;
   };
+  nonReimbursable: NonReimbursable | null;
+  currencyReconciliation: CurrencyReconciliation | null;
+  reimbursableAmount: {
+    value: number;
+    currency: string;
+    note: string; // how it was derived (claim minus exclusions, etc.)
+  } | null;
   summary: string; // 1-2 sentence plain-English case summary for the queue
   unresolved: string[]; // specifically what the assistant could NOT resolve
   recommendedAction: RecommendedAction;
@@ -133,5 +162,9 @@ export interface Policy {
   autoApproveLimit: number;
   hardReviewLimit: number;
   duplicateWindowDays: number;
+  reimbursement: {
+    alcohol: "not_reimbursable" | "reimbursable";
+    note: string;
+  };
   notes: string[];
 }

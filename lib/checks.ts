@@ -50,23 +50,34 @@ function receiptPresenceCheck(expense: Expense, policy: Policy) {
 function duplicateCheck(expense: Expense, all: Expense[], policy: Policy) {
   const dayMs = 24 * 60 * 60 * 1000;
   const date = new Date(expense.transactionDate).getTime();
-  const candidates = all
-    .filter(
-      (other) =>
-        other.id !== expense.id &&
-        other.employee.email === expense.employee.email &&
-        other.merchant.toLowerCase() === expense.merchant.toLowerCase() &&
-        Math.abs(other.total - expense.total) < 0.005 &&
-        Math.abs(new Date(other.transactionDate).getTime() - date) <= policy.duplicateWindowDays * dayMs
-    )
-    .map((other) => other.id);
+  // Flag two patterns for a human glance, and let the model characterize which:
+  //  - same day, same merchant, same employee → possible split bill OR same-day
+  //    re-submission (different or identical amounts).
+  //  - same merchant, same employee, identical amount within the window →
+  //    a delayed re-submission of the same bill.
+  // A different-amount purchase from the same merchant on a *different* day is
+  // just normal repeat business, not a duplicate — don't flag it.
+  const matches = all.filter((other) => {
+    if (other.id === expense.id) return false;
+    if (other.employee.email !== expense.employee.email) return false;
+    if (other.merchant.toLowerCase() !== expense.merchant.toLowerCase()) return false;
+    const sameDay = other.transactionDate === expense.transactionDate;
+    const amountMatch = Math.abs(other.total - expense.total) < 0.005;
+    const withinWindow =
+      Math.abs(new Date(other.transactionDate).getTime() - date) <= policy.duplicateWindowDays * dayMs;
+    return sameDay || (amountMatch && withinWindow);
+  });
+  const candidates = matches.map((o) => o.id);
+  const exactAmount = matches.some((o) => Math.abs(o.total - expense.total) < 0.005);
   return {
     status: candidates.length > 0 ? ("warn" as const) : ("pass" as const),
     candidateIds: candidates,
     note:
-      candidates.length > 0
-        ? `Same employee, merchant, and amount within ${policy.duplicateWindowDays} days: ${candidates.join(", ")}`
-        : "No duplicate candidates found",
+      candidates.length === 0
+        ? "No duplicate candidates found"
+        : exactAmount
+          ? `Same employee, merchant, and amount within ${policy.duplicateWindowDays} days — possible re-submission: ${candidates.join(", ")}`
+          : `Same employee and merchant within ${policy.duplicateWindowDays} days at different amounts — possible split bill or re-submission: ${candidates.join(", ")}`,
   };
 }
 

@@ -20,16 +20,19 @@ export const fmtDateTime = (iso: string) =>
 export function flagsFor(e: TriagedExpense): string[] {
   const flags: string[] = [];
   if (!e.checks || !e.aiVerdict) return flags;
-  if (e.checks.policyCap.status === "fail") flags.push("policy exception");
+  const v = e.aiVerdict;
+  if (v.engine !== "mock" && v.nonReimbursable && v.nonReimbursable.subtotalExcluded > 0.005)
+    flags.push("alcohol / non-reimbursable");
+  if (e.checks.policyCap.status === "fail") flags.push("over cap");
   if (e.checks.duplicate.status === "warn") flags.push("possible duplicate");
   if (e.checks.receiptPresence.status === "fail") flags.push("missing receipt");
-  if (e.checks.currency.status === "warn") flags.push("currency mismatch");
+  if (e.checks.currency.status === "warn") flags.push("foreign currency");
   if (
-    e.aiVerdict.engine !== "mock" &&
-    (e.aiVerdict.receiptMatch.status === "mismatch" || e.aiVerdict.receiptMatch.status === "uncertain")
+    v.engine !== "mock" &&
+    (v.receiptMatch.status === "mismatch" || v.receiptMatch.status === "uncertain")
   )
     flags.push("ambiguous receipt");
-  if (flags.length === 0 && e.aiVerdict.confidence < 0.8) flags.push("low confidence");
+  if (flags.length === 0 && v.confidence < 0.8) flags.push("low confidence");
   return flags;
 }
 

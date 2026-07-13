@@ -11,11 +11,17 @@
   "autoApproveLimit": 500,
   "hardReviewLimit": 1000,
   "duplicateWindowDays": 3,
+  "reimbursement": {
+    "alcohol": "not_reimbursable",
+    "note": "Alcohol is never reimbursable. When a receipt includes alcohol, deduct the alcohol line(s) plus their tax and reimburse only the remainder."
+  },
   "notes": [
     "Category caps are per expense. Lodging cap is per night.",
     "Receipts are required for any expense over $25.",
     "Expenses under $500 with all checks passing may be cleared in one click.",
     "Anything over $1,000 always requires manager review.",
-    "Client entertainment above the meals cap may be approved at the approver's discretion with a documented business purpose."
+    "Client entertainment above the meals cap may be approved at the approver's discretion with a documented business purpose.",
+    "Employees expense in USD; receipts from travel may be in a foreign currency, in which case the FX conversion must be sanity-checked before approval.",
+    "Alcohol is not reimbursable and must be excluded from the reimbursable amount."
   ]
 }

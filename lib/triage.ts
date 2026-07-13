@@ -34,9 +34,45 @@ const VerdictSchema = z.object({
   receiptMatch: z.object({
     status: z.enum(["match", "mismatch", "uncertain", "no_receipt"]),
     claimedTotal: z.number(),
-    extractedTotal: z.number().nullable(),
+    extractedTotal: z.number().nullable().describe("Receipt total in the RECEIPT's own currency"),
     note: z.string().describe("Plain-English reconciliation of receipt vs claim"),
   }),
+  nonReimbursable: z
+    .object({
+      items: z.array(
+        z.object({
+          description: z.string(),
+          amount: z.number().describe("In the receipt's currency"),
+        })
+      ),
+      subtotalExcluded: z.number().describe("Total to exclude INCLUDING tax on these items, receipt currency"),
+      currency: z.string(),
+      note: z.string(),
+    })
+    .nullable()
+    .describe(
+      "Line items policy says FlowCo won't reimburse (e.g. alcohol). Only you can find these — code cannot read the receipt. null if none."
+    ),
+  currencyReconciliation: z
+    .object({
+      receiptCurrency: z.string(),
+      receiptTotal: z.number().nullable(),
+      claimCurrency: z.string(),
+      claimedTotal: z.number(),
+      impliedRate: z.number().nullable().describe("claimedTotal divided by receiptTotal"),
+      plausible: z.boolean().describe("Is the implied FX rate reasonable for these currencies and date?"),
+      note: z.string(),
+    })
+    .nullable()
+    .describe("Fill in ONLY when the receipt currency differs from the claim currency; otherwise null."),
+  reimbursableAmount: z
+    .object({
+      value: z.number().describe("In the claim currency"),
+      currency: z.string(),
+      note: z.string().describe("How you derived it, e.g. claim minus excluded alcohol"),
+    })
+    .nullable()
+    .describe("The amount you believe should actually be reimbursed, if it differs from the claimed total; else null."),
   summary: z.string().describe("1-2 sentence case summary for the queue view"),
   unresolved: z
     .array(z.string())
@@ -58,13 +94,15 @@ const SYSTEM_PROMPT = `You are the expense-triage assistant for FlowCo's interna
 Your job is NOT to approve or reject expenses. Your job is to do the investigation so a human approver can decide in seconds instead of minutes. The approver sees your output next to the receipt image and the deterministic check results.
 
 Rules:
-- Read the receipt image carefully, including handwritten additions (tips, totals, signatures). Report what is printed separately from what is handwritten.
-- Deterministic checks (policy caps, duplicate detection, amount limits) are computed in code and given to you. Explain and contextualize them — do not recompute or contradict the arithmetic.
+- Read the receipt image carefully. These are real photos — angled, shadowed, crumpled, sometimes in a foreign currency with local taxes (GST/VAT). Read line items, handwritten additions (tips, totals, signatures), and per-item vs total amounts. Report what is printed separately from what is handwritten.
+- Deterministic checks (policy caps, duplicate detection, amount limits, currency mismatch) are computed in code and given to you. Explain and contextualize them — do not recompute or contradict the arithmetic.
+- ALCOHOL AND OTHER NON-REIMBURSABLE ITEMS: This is your most important job — code cannot read the receipt, so only you can catch these. If the receipt lists alcohol (beer, wine, cocktails, spirits, a bar/liquor line), it is NOT reimbursable per FlowCo policy. Identify each such line, add any tax attributable to it, put them in "nonReimbursable", and compute the reimbursable remainder in "reimbursableAmount". Never clear an expense whose receipt contains alcohol — route it to a human with the exact amount to deduct.
+- FOREIGN CURRENCY: When the receipt is in a different currency than the claim (claims are in USD), fill in "currencyReconciliation" — the receipt total in its own currency, the implied FX rate, and whether that rate is plausible for the date. You cannot verify the exact rate used, so say so and route to a human.
 - Be explicit about what you could NOT resolve. Never paper over ambiguity — an honest "I can't verify X" is the most valuable thing you produce.
-- Policy exceptions are the approver's call, not yours. FlowCo policy allows client entertainment above the meals cap at the approver's discretion with a documented business purpose — when you see that pattern, lay out the evidence and route to the human.
-- Duplicate candidates always go to the human. Compare the two records and say what distinguishes them (times, routes, receipts) so the human can decide fast.
+- Policy exceptions are the approver's call, not yours. FlowCo policy allows entertainment above the meals cap at the approver's discretion with a documented business purpose — when you see that pattern, lay out the evidence (per-person math if a group meal) and route to the human.
+- Duplicate candidates always go to the human. Compare the records and say what distinguishes them — a re-submission of the same bill vs. a legitimate split of one large group bill (different items, consecutive bill numbers, same table/time) vs. two genuinely separate purchases. Give the approver the distinguishing evidence.
 - When information is missing or ambiguous, draft a short, friendly, specific message to the employee asking for exactly what is needed — so the approver can send it in one click.
-- Keep the summary tight: it is a queue row, not a report.`;
+- Keep the summary tight: it is a queue row, not a report. If money must be deducted (alcohol, FX), lead the summary with the reimbursable amount.`;
 
 function buildUserContent(
   expense: TriagedExpense,
@@ -161,6 +199,11 @@ function applyGuardrail(checks: DeterministicChecks, model: ModelVerdict): "clea
   if (model.confidence < CONFIDENCE_FLOOR) return "needs_human";
   if (model.receiptMatch.status === "mismatch" || model.receiptMatch.status === "uncertain")
     return "needs_human";
+  // If the model found money that must be deducted (alcohol, other
+  // non-reimbursables), a human must confirm the reduced amount before pay.
+  if (model.nonReimbursable && model.nonReimbursable.subtotalExcluded > 0.005) return "needs_human";
+  // Foreign-currency claims can't be auto-cleared — the FX rate isn't verifiable in code.
+  if (model.currencyReconciliation) return "needs_human";
   return "clear";
 }
 
@@ -228,6 +271,9 @@ function mockVerdict(expense: TriagedExpense, checks: DeterministicChecks): Tria
       extractedTotal: null,
       note: "Mock engine: receipt not read (no model call).",
     },
+    nonReimbursable: null,
+    currencyReconciliation: null,
+    reimbursableAmount: null,
     summary: needsHuman
       ? `Flagged by deterministic checks: ${problems.join("; ")}`
       : `All deterministic checks pass. ${expense.merchant}, $${expense.total.toFixed(2)}, ${expense.category}.`,

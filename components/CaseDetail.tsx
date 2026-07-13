@@ -47,26 +47,31 @@ export default function CaseDetail({
 
   const actionable = expense.status === "triaged" || expense.status === "pending";
   const extraction = v?.receiptExtraction ?? null;
-  const delta =
-    v && v.receiptMatch.extractedTotal !== null
+  const nr = v?.nonReimbursable ?? null;
+  const fx = v?.currencyReconciliation ?? null;
+  const reimb = v?.reimbursableAmount ?? null;
+  const claimCcy = expense.currency;
+  const rcCcy = nr?.currency ?? fx?.receiptCurrency ?? expense.receiptCurrency;
+  const sameCurrencyDelta =
+    v && !fx && v.receiptMatch.extractedTotal !== null
       ? expense.total - v.receiptMatch.extractedTotal
       : null;
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="absolute inset-0 bg-ink/30" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
       <aside className="absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-surface shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-surface px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-surface/95 px-6 py-3.5 backdrop-blur">
           <div className="flex items-center gap-3">
             <span className="figure text-sm text-ink-faint">{expense.id}</span>
             <span className="text-base font-semibold">{expense.employee.name}</span>
-            <span className="text-xs text-ink-faint">{expense.employee.department}</span>
+            <span className="hidden text-xs text-ink-faint sm:inline">{expense.employee.department}</span>
             <StatusChip status={expense.status} />
           </div>
           <button
             onClick={onClose}
-            className="rounded border border-line px-2.5 py-1 text-sm text-ink-soft hover:bg-paper"
+            className="rounded border border-line px-2.5 py-1 text-xs font-medium text-ink-soft hover:bg-paper"
             aria-label="Close panel"
           >
             Esc
@@ -74,6 +79,63 @@ export default function CaseDetail({
         </div>
 
         <div className="flex-1 px-6 py-5">
+          {/* Verdict banner — the bottom line, first */}
+          {v && (
+            <div
+              className={`mb-5 rounded-lg border px-4 py-3 ${
+                v.verdict === "clear"
+                  ? "border-clear/25 bg-clear-soft"
+                  : "border-flag/25 bg-flag-soft"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`chip ${v.verdict === "clear" ? "bg-clear text-white" : "bg-flag text-white"}`}
+                  >
+                    {v.verdict === "clear" ? "Ready to clear" : "Needs your review"}
+                  </span>
+                  <span className="text-sm font-medium text-ink">
+                    Assistant recommends{" "}
+                    <span className="font-semibold">{v.recommendedAction.replace("_", " ")}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="figure text-xs text-ink-faint">confidence {v.confidence.toFixed(2)}</span>
+                  <EngineChip engine={v.engine} model={v.model} />
+                </div>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-ink">{v.summary}</p>
+            </div>
+          )}
+
+          {/* Reimbursable ledger — the signature: watch money reconcile line by line */}
+          {reimb && Math.abs(reimb.value - expense.total) > 0.005 && (
+            <div className="mb-5 overflow-hidden rounded-lg border-2 border-ink/10">
+              <div className="border-b border-line bg-ink px-4 py-2 text-xs font-bold uppercase tracking-widest text-paper">
+                Reconciliation
+              </div>
+              <div className="px-4 py-3">
+                <LedgerRow label="Claimed" value={fmtMoney(expense.total, claimCcy)} />
+                {nr && nr.subtotalExcluded > 0.005 && (
+                  <LedgerRow
+                    label={`Less non-reimbursable (${fmtMoney(nr.subtotalExcluded, rcCcy)})`}
+                    value={`− ${fmtMoney(expense.total - reimb.value, claimCcy)}`}
+                    strike
+                  />
+                )}
+                <div className="my-1.5 border-t border-line-strong" />
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-semibold">Reimburse</span>
+                  <span className="figure text-2xl font-bold text-clear">
+                    {fmtMoney(reimb.value, reimb.currency)}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">{reimb.note}</p>
+              </div>
+            </div>
+          )}
+
           {/* Claim summary */}
           <SectionTitle>Claim</SectionTitle>
           <div className="mb-5 rounded-md border border-line">
@@ -90,10 +152,10 @@ export default function CaseDetail({
               <div className="text-sm">{expense.purpose}</div>
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-1 border-t border-line bg-paper px-4 py-2.5 text-sm">
-              <Field label="Amount" value={fmtMoney(expense.amount)} mono />
-              <Field label="Tax" value={fmtMoney(expense.tax)} mono />
-              <Field label="Tip" value={fmtMoney(expense.tip)} mono />
-              <Field label="Claimed total" value={fmtMoney(expense.total)} mono strong />
+              <Field label="Amount" value={fmtMoney(expense.amount, claimCcy)} mono />
+              <Field label="Tax" value={fmtMoney(expense.tax, claimCcy)} mono />
+              <Field label="Tip" value={fmtMoney(expense.tip, claimCcy)} mono />
+              <Field label="Claimed total" value={fmtMoney(expense.total, claimCcy)} mono strong />
             </div>
           </div>
 
@@ -107,7 +169,7 @@ export default function CaseDetail({
                   <img
                     src={expense.receiptUrl}
                     alt={`Receipt for ${expense.id}`}
-                    className="max-h-105 w-full rounded-md border border-line object-contain bg-paper"
+                    className="max-h-115 w-full rounded-md border border-line object-contain bg-paper"
                   />
                 </a>
               ) : (
@@ -118,38 +180,42 @@ export default function CaseDetail({
             </div>
 
             <div>
-              <SectionTitle>Reconciliation</SectionTitle>
+              <SectionTitle>What the assistant read</SectionTitle>
               {v ? (
                 <div className="rounded-md border border-line">
-                  <ReconRow label="Claimed total" value={fmtMoney(v.receiptMatch.claimedTotal)} />
-                  {extraction && (
+                  {extraction ? (
                     <>
                       <ReconRow
-                        label="Printed on receipt"
-                        value={extraction.printedTotal !== null ? fmtMoney(extraction.printedTotal) : "—"}
+                        label="Merchant"
+                        value={extraction.merchant ?? "—"}
                       />
                       <ReconRow
-                        label="Handwritten addition"
+                        label="Receipt total"
                         value={
-                          extraction.handwrittenAdjustment !== null
-                            ? fmtMoney(extraction.handwrittenAdjustment)
+                          v.receiptMatch.extractedTotal !== null
+                            ? fmtMoney(v.receiptMatch.extractedTotal, rcCcy)
                             : "—"
                         }
                       />
-                      <ReconRow
-                        label="Assistant's read of paid total"
-                        value={extraction.finalTotal !== null ? fmtMoney(extraction.finalTotal) : "—"}
-                      />
-                      {extraction.currency && extraction.currency !== expense.currency && (
-                        <ReconRow label="Receipt currency" value={extraction.currency} alert />
+                      {extraction.handwrittenAdjustment !== null && (
+                        <ReconRow
+                          label="Handwritten addition"
+                          value={fmtMoney(extraction.handwrittenAdjustment, rcCcy)}
+                        />
+                      )}
+                      {sameCurrencyDelta !== null && Math.abs(sameCurrencyDelta) > 0.005 && (
+                        <ReconRow
+                          label="Delta vs claim"
+                          value={fmtMoney(sameCurrencyDelta, claimCcy)}
+                          alert
+                        />
                       )}
                     </>
-                  )}
-                  {delta !== null && Math.abs(delta) > 0.005 && (
-                    <ReconRow label="Delta vs claim" value={fmtMoney(delta)} alert />
+                  ) : (
+                    <ReconRow label="Receipt" value="not read" />
                   )}
                   <div
-                    className={`flex items-center justify-between border-t border-line px-3 py-2 text-sm ${
+                    className={`flex items-center justify-between border-t border-line px-3 py-2 text-xs font-semibold uppercase tracking-wide ${
                       v.receiptMatch.status === "match"
                         ? "bg-clear-soft text-clear"
                         : v.receiptMatch.status === "no_receipt"
@@ -159,12 +225,8 @@ export default function CaseDetail({
                             : "bg-flag-soft text-flag"
                     }`}
                   >
-                    <span className="font-semibold uppercase tracking-wide text-xs">
-                      {v.receiptMatch.status.replace("_", " ")}
-                    </span>
-                    {extraction && (
-                      <span className="text-xs">receipt legibility: {extraction.legibilityConfidence}</span>
-                    )}
+                    <span>{v.receiptMatch.status.replace("_", " ")}</span>
+                    {extraction && <span>legibility: {extraction.legibilityConfidence}</span>}
                   </div>
                   <p className="px-3 py-2 text-xs text-ink-soft">{v.receiptMatch.note}</p>
                   {extraction?.lineNotes && (
@@ -175,11 +237,62 @@ export default function CaseDetail({
                 </div>
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-md border border-dashed border-line-strong text-sm text-ink-faint">
-                  Run triage to reconcile
+                  Run triage to read the receipt
                 </div>
               )}
             </div>
           </div>
+
+          {/* Non-reimbursable items (alcohol) — model-only finding */}
+          {nr && nr.items.length > 0 && (
+            <>
+              <SectionTitle>Non-reimbursable items · found by reading the receipt</SectionTitle>
+              <div className="mb-5 rounded-md border border-danger/25 bg-danger-soft/40">
+                {nr.items.map((it, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between border-b border-danger/15 px-4 py-2 text-sm last:border-b-0"
+                  >
+                    <span className="text-ink line-through decoration-danger/60">{it.description}</span>
+                    <span className="figure text-danger">{fmtMoney(it.amount, nr.currency)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-danger/25 bg-danger-soft px-4 py-2 text-sm font-semibold">
+                  <span className="text-danger">Excluded from reimbursement</span>
+                  <span className="figure text-danger">{fmtMoney(nr.subtotalExcluded, nr.currency)}</span>
+                </div>
+                {nr.note && <p className="px-4 py-2 text-xs text-ink-soft">{nr.note}</p>}
+              </div>
+            </>
+          )}
+
+          {/* Currency reconciliation */}
+          {fx && (
+            <>
+              <SectionTitle>Currency · {fx.receiptCurrency} receipt vs {fx.claimCurrency} claim</SectionTitle>
+              <div className="mb-5 rounded-md border border-line">
+                <ReconRow
+                  label={`Receipt total (${fx.receiptCurrency})`}
+                  value={fx.receiptTotal !== null ? fmtMoney(fx.receiptTotal, fx.receiptCurrency) : "—"}
+                />
+                <ReconRow label={`Claimed (${fx.claimCurrency})`} value={fmtMoney(fx.claimedTotal, fx.claimCurrency)} />
+                {fx.impliedRate !== null && (
+                  <ReconRow
+                    label="Implied rate"
+                    value={`${fx.receiptCurrency === "INR" ? (1 / fx.impliedRate).toFixed(1) + " INR / USD" : fx.impliedRate.toFixed(4)}`}
+                  />
+                )}
+                <div
+                  className={`border-t border-line px-3 py-2 text-xs font-semibold uppercase tracking-wide ${
+                    fx.plausible ? "bg-flag-soft text-flag" : "bg-danger-soft text-danger"
+                  }`}
+                >
+                  {fx.plausible ? "plausible — needs a human sanity-check" : "rate looks off"}
+                </div>
+                <p className="px-3 py-2 text-xs text-ink-soft">{fx.note}</p>
+              </div>
+            </>
+          )}
 
           {/* Deterministic checks */}
           {expense.checks && (
@@ -191,7 +304,7 @@ export default function CaseDetail({
                     key={key}
                     className="flex items-start gap-3 border-b border-line px-4 py-2 text-sm last:border-b-0"
                   >
-                    <span className="w-4 text-center"><CheckIcon status={check.status} /></span>
+                    <span className="w-4 pt-0.5 text-center"><CheckIcon status={check.status} /></span>
                     <span className="w-32 shrink-0 font-medium">{CHECK_LABELS[key] ?? key}</span>
                     <span className="text-ink-soft">{check.note}</span>
                   </div>
@@ -217,11 +330,17 @@ export default function CaseDetail({
                   </thead>
                   <tbody>
                     {[expense, ...duplicates].map((d) => (
-                      <tr key={d.id} className={`border-b border-line last:border-b-0 ${d.id === expense.id ? "bg-accent-soft/40" : ""}`}>
-                        <td className="figure px-3 py-2 text-xs">{d.id}{d.id === expense.id ? " (this)" : ""}</td>
+                      <tr
+                        key={d.id}
+                        className={`border-b border-line last:border-b-0 ${d.id === expense.id ? "bg-accent-soft/40" : ""}`}
+                      >
+                        <td className="figure px-3 py-2 text-xs">
+                          {d.id}
+                          {d.id === expense.id ? " (this)" : ""}
+                        </td>
                         <td className="px-3 py-2">{d.purpose}</td>
                         <td className="figure px-3 py-2 text-xs">{fmtDate(d.transactionDate)}</td>
-                        <td className="figure px-3 py-2 text-right">{fmtMoney(d.total)}</td>
+                        <td className="figure px-3 py-2 text-right">{fmtMoney(d.total, d.currency)}</td>
                         <td className="px-3 py-2"><StatusChip status={d.status} /></td>
                       </tr>
                     ))}
@@ -231,50 +350,24 @@ export default function CaseDetail({
             </>
           )}
 
-          {/* Assistant verdict */}
-          {v && (
+          {/* What the assistant couldn't resolve */}
+          {v && v.unresolved.length > 0 && (
             <>
-              <SectionTitle>Assistant verdict</SectionTitle>
-              <div className="mb-5 rounded-md border border-line">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`chip ${v.verdict === "clear" ? "bg-clear-soft text-clear" : "bg-flag-soft text-flag"}`}
-                    >
-                      {v.verdict === "clear" ? "ready to clear" : "needs human"}
-                    </span>
-                    <span className="chip bg-neutral-chip text-ink-soft">
-                      recommends: {v.recommendedAction.replace("_", " ")}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="figure text-xs text-ink-faint">
-                      confidence {v.confidence.toFixed(2)}
-                    </span>
-                    <EngineChip engine={v.engine} model={v.model} />
-                  </div>
-                </div>
-                <p className="px-4 py-3 text-sm">{v.summary}</p>
-                {v.unresolved.length > 0 && (
-                  <div className="mx-4 mb-3 border-l-2 border-flag bg-flag-soft/60 px-3 py-2">
-                    <div className="mb-1 text-xs font-bold uppercase tracking-wide text-flag">
-                      What the assistant couldn&apos;t resolve
-                    </div>
-                    <ul className="list-disc space-y-0.5 pl-4 text-sm text-ink">
-                      {v.unresolved.map((u, i) => (
-                        <li key={i}>{u}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <p className="border-t border-line px-4 py-2.5 text-xs text-ink-soft">
-                  <span className="font-semibold">Why:</span> {v.rationale}
+              <SectionTitle>What the assistant couldn&apos;t resolve</SectionTitle>
+              <div className="mb-5 rounded-md border-l-2 border-flag bg-flag-soft/50 px-4 py-3">
+                <ul className="list-disc space-y-1 pl-4 text-sm text-ink">
+                  {v.unresolved.map((u, i) => (
+                    <li key={i}>{u}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 border-t border-flag/20 pt-2 text-xs text-ink-soft">
+                  <span className="font-semibold">Why this recommendation:</span> {v.rationale}
                 </p>
               </div>
             </>
           )}
 
-          {/* Actions */}
+          {/* Decision */}
           {actionable && v && (
             <>
               <SectionTitle>Decision</SectionTitle>
@@ -285,7 +378,11 @@ export default function CaseDetail({
                     disabled={acting !== null}
                     className="rounded bg-clear px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                   >
-                    {acting === "approve" ? "Approving…" : "Approve"}
+                    {acting === "approve"
+                      ? "Approving…"
+                      : reimb && Math.abs(reimb.value - expense.total) > 0.005
+                        ? `Approve ${fmtMoney(reimb.value, reimb.currency)}`
+                        : "Approve"}
                   </button>
                   <button
                     onClick={() => doAction("reject")}
@@ -324,9 +421,14 @@ export default function CaseDetail({
               <SectionTitle>Audit trail</SectionTitle>
               <div className="mb-6 rounded-md border border-line">
                 {expense.audit.map((entry, i) => (
-                  <div key={i} className="flex items-baseline gap-3 border-b border-line px-4 py-2 text-xs last:border-b-0">
+                  <div
+                    key={i}
+                    className="flex items-baseline gap-3 border-b border-line px-4 py-2 text-xs last:border-b-0"
+                  >
                     <span className="figure shrink-0 text-ink-faint">{fmtDateTime(entry.at)}</span>
-                    <span className={`chip shrink-0 ${entry.actor === "assistant" ? "bg-accent-soft text-accent" : "bg-neutral-chip text-ink-soft"}`}>
+                    <span
+                      className={`chip shrink-0 ${entry.actor === "assistant" ? "bg-accent-soft text-accent" : "bg-neutral-chip text-ink-soft"}`}
+                    >
                       {entry.actor}
                     </span>
                     <span className="font-medium">{entry.action}</span>
@@ -337,9 +439,10 @@ export default function CaseDetail({
             </>
           )}
 
-          <p className="figure pb-6 text-[10px] text-ink-faint">
-            policy: caps {Object.entries(policy.categoryCaps).map(([k, v2]) => `${k} $${v2}`).join(" · ")} · receipts
-            required over ${policy.receiptRequiredAbove} · one-click under ${policy.autoApproveLimit}
+          <p className="figure pb-6 text-[10px] leading-relaxed text-ink-faint">
+            policy: meals ${policy.categoryCaps.meals} · travel ${policy.categoryCaps.travel} · lodging $
+            {policy.categoryCaps.lodging}/night · receipts required over ${policy.receiptRequiredAbove} · one-click under $
+            {policy.autoApproveLimit} · alcohol not reimbursable
           </p>
         </div>
       </aside>
@@ -348,9 +451,7 @@ export default function CaseDetail({
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-ink-faint">{children}</h3>
-  );
+  return <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-ink-faint">{children}</h3>;
 }
 
 function Field({
@@ -377,6 +478,15 @@ function ReconRow({ label, value, alert }: { label: string; value: string; alert
     <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-sm last:border-b-0">
       <span className="text-ink-soft">{label}</span>
       <span className={`figure ${alert ? "font-semibold text-danger" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+function LedgerRow({ label, value, strike }: { label: string; value: string; strike?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between py-0.5 text-sm">
+      <span className="text-ink-soft">{label}</span>
+      <span className={`figure ${strike ? "text-danger" : "text-ink"}`}>{value}</span>
     </div>
   );
 }
