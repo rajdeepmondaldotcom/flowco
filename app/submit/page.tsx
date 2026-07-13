@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { fmtMoney } from "@/components/badges";
+import ThemeToggle from "@/components/ThemeToggle";
 import type { Employee } from "@/lib/types";
 import type { ExpenseDraft } from "@/lib/extract";
 
@@ -85,16 +86,28 @@ export default function SubmitPage() {
   };
 
   return (
-    <div className="flex-1">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-xl items-center justify-between px-6 py-4">
-          <div className="flex items-baseline gap-3">
-            <span className="text-lg font-bold tracking-tight">FlowCo</span>
-            <span className="text-sm text-ink-soft">Quick expense</span>
+    <div className="desk-canvas flex-1">
+      <header className="border-b border-line bg-surface/90 backdrop-blur">
+        <div className="mx-auto flex max-w-xl items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white shadow-sm">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 3h9l3 3v15H6z" />
+                <path d="M9 8h6M9 12h6M9 16h3" strokeWidth="1.6" />
+              </svg>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[15px] font-bold tracking-tight">FlowCo</span>
+              <span className="hidden h-3 w-px bg-line-strong sm:block" />
+              <span className="hidden text-[13px] text-ink-soft sm:block">Quick expense</span>
+            </div>
           </div>
-          <Link href="/" className="text-sm text-accent underline">
-            Approver view →
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/" className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-accent hover:bg-paper">
+              Approver view →
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -106,7 +119,7 @@ export default function SubmitPage() {
         )}
 
         {(phase === "compose" || phase === "extracting") && (
-          <div className="rounded-md border border-line bg-surface p-5">
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <label className="mb-1 block text-xs font-medium text-ink-faint">You are</label>
             <select
               value={employee.email}
@@ -157,7 +170,7 @@ export default function SubmitPage() {
         )}
 
         {(phase === "review" || phase === "submitting") && draft && (
-          <div className="rounded-md border border-line bg-surface p-5">
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-ink-faint">
               Check what the assistant filled in
             </h2>
@@ -208,7 +221,7 @@ export default function SubmitPage() {
         )}
 
         {phase === "done" && (
-          <div className="rounded-md border border-line bg-surface p-6 text-center">
+          <div className="rounded-xl border border-line bg-surface p-6 text-center shadow-sm">
             <div className="mb-1 text-2xl">✓</div>
             <h2 className="mb-1 text-base font-semibold">
               Submitted — <span className="figure">{submittedId}</span>

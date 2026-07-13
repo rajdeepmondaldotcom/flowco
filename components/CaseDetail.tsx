@@ -57,10 +57,16 @@ export default function CaseDetail({
       ? expense.total - v.receiptMatch.extractedTotal
       : null;
 
+  const resolved =
+    expense.status === "approved" || expense.status === "rejected" || expense.status === "info_requested";
+
   return (
     <div className="fixed inset-0 z-40">
-      <div className="absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
-      <aside className="absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-surface shadow-2xl">
+      <div className="fade-in absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
+      <aside className="panel-in absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-surface shadow-2xl">
+        {resolved && (
+          <DecisionStamp status={expense.status as "approved" | "rejected" | "info_requested"} />
+        )}
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-surface/95 px-6 py-3.5 backdrop-blur">
           <div className="flex items-center gap-3">
@@ -446,6 +452,25 @@ export default function CaseDetail({
           </p>
         </div>
       </aside>
+    </div>
+  );
+}
+
+function DecisionStamp({ status }: { status: "approved" | "rejected" | "info_requested" }) {
+  const map = {
+    approved: { label: "Approved", color: "var(--clear)" },
+    rejected: { label: "Rejected", color: "var(--danger)" },
+    info_requested: { label: "Info requested", color: "var(--flag)" },
+  } as const;
+  const s = map[status];
+  return (
+    <div className="pointer-events-none absolute right-8 top-16 z-20">
+      <span
+        className="stamp stamp-in"
+        style={{ color: s.color, borderColor: `color-mix(in srgb, ${s.color} 55%, transparent)` }}
+      >
+        {s.label}
+      </span>
     </div>
   );
 }

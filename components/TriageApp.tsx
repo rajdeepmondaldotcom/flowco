@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Policy, TriagedExpense } from "@/lib/types";
 import { flagsFor, fmtDate, fmtMoney, StatusChip } from "./badges";
 import CaseDetail from "./CaseDetail";
+import ThemeToggle from "./ThemeToggle";
 
 const TRIAGE_CONCURRENCY = 3;
 
@@ -16,10 +17,15 @@ export default function TriageApp() {
   const [running, setRunning] = useState(false);
   const [bulkApproving, setBulkApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/expenses");
     const data = await res.json();
+    if (data.error) {
+      setError(data.error);
+      return;
+    }
     setExpenses(data.expenses);
     setPolicy(data.policy);
     setMockMode(data.mockMode);
@@ -35,7 +41,6 @@ export default function TriageApp() {
   const triageOne = useCallback(async (id: string) => {
     setTriaging((prev) => new Set(prev).add(id));
     try {
-      // one retry for transient dev-server hiccups on long requests
       for (let attempt = 0; ; attempt++) {
         try {
           const res = await fetch("/api/triage", {
@@ -76,7 +81,7 @@ export default function TriageApp() {
       }
     });
     await Promise.all(workers);
-    await refresh(); // re-sync with the server in case any response was lost
+    await refresh();
     setRunning(false);
   }, [expenses, triageOne, refresh]);
 
@@ -116,6 +121,22 @@ export default function TriageApp() {
     return { untriaged, clear, review, resolved };
   }, [expenses]);
 
+  // Value metrics — the leverage story, in numbers.
+  const metrics = useMemo(() => {
+    const triaged = expenses.filter((e) => e.aiVerdict);
+    const clearCount = expenses.filter((e) => e.aiVerdict?.verdict === "clear").length;
+    const recovered = expenses.reduce((sum, e) => {
+      const r = e.aiVerdict?.reimbursableAmount;
+      if (r && e.total - r.value > 0.005) return sum + (e.total - r.value);
+      return sum;
+    }, 0);
+    return {
+      triagedCount: triaged.length,
+      clearPct: triaged.length ? Math.round((clearCount / triaged.length) * 100) : 0,
+      recovered,
+    };
+  }, [expenses]);
+
   const approveAllClear = useCallback(async () => {
     setBulkApproving(true);
     for (const e of lanes.clear) {
@@ -124,39 +145,80 @@ export default function TriageApp() {
     setBulkApproving(false);
   }, [lanes.clear, act]);
 
+  // Flat visible order for keyboard nav
+  const visibleOrder = useMemo(
+    () => [...lanes.clear, ...lanes.review, ...lanes.untriaged, ...lanes.resolved].map((e) => e.id),
+    [lanes]
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (selectedId) return; // panel handles its own keys
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setCursor((c) => {
+          const i = visibleOrder.indexOf(c ?? "");
+          return visibleOrder[Math.min(visibleOrder.length - 1, i + 1)] ?? visibleOrder[0] ?? null;
+        });
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setCursor((c) => {
+          const i = visibleOrder.indexOf(c ?? "");
+          return visibleOrder[Math.max(0, i - 1)] ?? visibleOrder[0] ?? null;
+        });
+      } else if ((e.key === "Enter" || e.key === "o") && cursor) {
+        e.preventDefault();
+        setSelectedId(cursor);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, cursor, visibleOrder]);
+
   const selected = expenses.find((e) => e.id === selectedId) ?? null;
   const pendingCount = lanes.untriaged.length;
 
   return (
-    <div className="flex-1">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-baseline gap-3">
-            <span className="text-lg font-bold tracking-tight">FlowCo</span>
-            <span className="text-sm text-ink-soft">Approvals Triage</span>
+    <div className="desk-canvas flex-1">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+          <div className="flex items-center gap-3">
+            <LedgerMark />
+            <div className="flex items-baseline gap-2">
+              <span className="text-[15px] font-bold tracking-tight">FlowCo</span>
+              <span className="hidden h-3 w-px bg-line-strong sm:block" />
+              <span className="hidden text-[13px] text-ink-soft sm:block">Approvals Triage</span>
+            </div>
             {mockMode && (
-              <span className="chip bg-danger-soft text-danger">mock mode — set ANTHROPIC_API_KEY</span>
+              <span className="chip bg-danger-soft text-danger">mock — set ANTHROPIC_API_KEY</span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <a href="/submit" className="mr-2 text-sm text-accent underline">
+            <ThemeToggle />
+            <a
+              href="/submit"
+              className="hidden rounded-md px-2.5 py-1.5 text-[13px] font-medium text-ink-soft hover:bg-paper sm:block"
+            >
               Employee submit
             </a>
             <button
               onClick={resetDemo}
-              className="rounded border border-line-strong px-3 py-1.5 text-sm text-ink-soft hover:bg-paper"
+              className="rounded-md border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink-soft transition hover:bg-paper"
             >
               Reset
             </button>
             <button
               onClick={runTriage}
               disabled={running || pendingCount === 0}
-              className="rounded bg-accent px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-40"
             >
+              {running && <Spinner />}
               {running
-                ? `Triaging… ${expenses.length - pendingCount}/${expenses.length}`
+                ? `Triaging ${metrics.triagedCount}/${expenses.length}`
                 : pendingCount > 0
-                  ? `Run assistant triage (${pendingCount})`
+                  ? `Run assistant triage · ${pendingCount}`
                   : "Queue triaged"}
             </button>
           </div>
@@ -165,19 +227,32 @@ export default function TriageApp() {
 
       <main className="mx-auto max-w-6xl px-6 py-6">
         {error && (
-          <div className="mb-4 rounded border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
-            {error}
-            <button className="ml-3 underline" onClick={() => setError(null)}>
+          <div className="mb-4 flex items-center justify-between rounded-md border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
+            <span>{error}</span>
+            <button className="underline" onClick={() => setError(null)}>
               dismiss
             </button>
           </div>
         )}
 
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Awaiting triage" value={lanes.untriaged.length} />
-          <Stat label="Ready to clear" value={lanes.clear.length} tone="clear" />
-          <Stat label="Needs your review" value={lanes.review.length} tone="flag" />
-          <Stat label="Resolved" value={lanes.resolved.length} />
+        {/* Value metrics — the leverage story */}
+        <div className="mb-7 grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-surface shadow-sm md:grid-cols-4">
+          <Metric label="Awaiting triage" value={String(lanes.untriaged.length)} />
+          <Metric
+            label="Ready to clear"
+            value={String(lanes.clear.length)}
+            sub={metrics.triagedCount ? `${metrics.clearPct}% auto-cleared` : undefined}
+            tone="clear"
+            divide
+          />
+          <Metric label="Needs your review" value={String(lanes.review.length)} tone="flag" divide />
+          <Metric
+            label="Recovered by the assistant"
+            value={fmtMoney(metrics.recovered, "USD")}
+            sub="caught non-reimbursable"
+            tone="accent"
+            divide
+          />
         </div>
 
         {lanes.clear.length > 0 && (
@@ -189,14 +264,15 @@ export default function TriageApp() {
               <button
                 onClick={approveAllClear}
                 disabled={bulkApproving}
-                className="rounded bg-clear px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md bg-clear px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
               >
-                {bulkApproving ? "Approving…" : `Approve all (${lanes.clear.length})`}
+                {bulkApproving && <Spinner />}
+                {bulkApproving ? "Approving…" : `Approve all · ${lanes.clear.length}`}
               </button>
             }
           >
-            {lanes.clear.map((e) => (
-              <Row key={e.id} expense={e} tone="clear" onSelect={setSelectedId} />
+            {lanes.clear.map((e, i) => (
+              <Row key={e.id} expense={e} tone="clear" index={i} cursor={cursor} onSelect={setSelectedId} />
             ))}
           </Lane>
         )}
@@ -204,11 +280,11 @@ export default function TriageApp() {
         {lanes.review.length > 0 && (
           <Lane
             title="Needs your review"
-            subtitle="The assistant did the digging but couldn't resolve these — evidence is assembled inside."
+            subtitle="The assistant did the digging but couldn't resolve these — the evidence is assembled inside."
             tone="flag"
           >
-            {lanes.review.map((e) => (
-              <Row key={e.id} expense={e} tone="flag" onSelect={setSelectedId} />
+            {lanes.review.map((e, i) => (
+              <Row key={e.id} expense={e} tone="flag" index={i} cursor={cursor} onSelect={setSelectedId} />
             ))}
           </Lane>
         )}
@@ -219,11 +295,13 @@ export default function TriageApp() {
             subtitle="Submitted expenses the assistant hasn't investigated yet."
             tone="neutral"
           >
-            {lanes.untriaged.map((e) => (
+            {lanes.untriaged.map((e, i) => (
               <Row
                 key={e.id}
                 expense={e}
                 tone="neutral"
+                index={i}
+                cursor={cursor}
                 onSelect={setSelectedId}
                 busy={triaging.has(e.id)}
               />
@@ -233,26 +311,31 @@ export default function TriageApp() {
 
         {lanes.resolved.length > 0 && (
           <Lane title="Resolved" subtitle="Decisions made this session — full audit trail inside." tone="neutral">
-            {lanes.resolved.map((e) => (
-              <Row key={e.id} expense={e} tone="neutral" onSelect={setSelectedId} />
+            {lanes.resolved.map((e, i) => (
+              <Row key={e.id} expense={e} tone="neutral" index={i} cursor={cursor} onSelect={setSelectedId} />
             ))}
           </Lane>
         )}
-      </main>
 
-      <footer className="mx-auto max-w-6xl px-6 pb-8 text-xs text-ink-faint">
-        Prototype for the Netchex Applied AI exercise — design notes, architecture, and the honest
-        &ldquo;where the model got it wrong&rdquo; story are in{" "}
-        <a
-          href="https://github.com/rajdeepmondaldotcom/flowco"
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent underline"
-        >
-          the repo
-        </a>
-        .
-      </footer>
+        <footer className="flex items-center justify-between gap-4 pb-8 pt-2 text-xs text-ink-faint">
+          <span>
+            <kbd className="figure rounded border border-line px-1">j</kbd>{" "}
+            <kbd className="figure rounded border border-line px-1">k</kbd> to move ·{" "}
+            <kbd className="figure rounded border border-line px-1">↵</kbd> to open
+          </span>
+          <span>
+            Netchex Applied AI exercise ·{" "}
+            <a
+              href="https://github.com/rajdeepmondaldotcom/flowco"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent underline"
+            >
+              repo
+            </a>
+          </span>
+        </footer>
+      </main>
 
       {selected && policy && (
         <CaseDetail
@@ -268,12 +351,46 @@ export default function TriageApp() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: "clear" | "flag" }) {
-  const color = tone === "clear" ? "text-clear" : tone === "flag" ? "text-flag" : "text-ink";
+function LedgerMark() {
   return (
-    <div className="rounded-md border border-line bg-surface px-4 py-3">
-      <div className={`figure text-2xl font-semibold ${color}`}>{value}</div>
-      <div className="mt-0.5 text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</div>
+    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white shadow-sm">
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M6 3h9l3 3v15H6z" />
+        <path d="M9 8h6M9 12h6M9 16h3" strokeWidth="1.6" />
+      </svg>
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  sub,
+  tone,
+  divide,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "clear" | "flag" | "accent";
+  divide?: boolean;
+}) {
+  const color =
+    tone === "clear" ? "text-clear" : tone === "flag" ? "text-flag" : tone === "accent" ? "text-accent" : "text-ink";
+  return (
+    <div className={`px-5 py-4 ${divide ? "border-t border-line md:border-l md:border-t-0" : ""}`}>
+      <div className={`figure text-[26px] font-semibold leading-none ${color}`}>{value}</div>
+      <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-faint">{label}</div>
+      {sub && <div className="mt-0.5 text-[11px] text-ink-faint">{sub}</div>}
     </div>
   );
 }
@@ -291,17 +408,21 @@ function Lane({
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const dot = tone === "clear" ? "bg-clear" : tone === "flag" ? "bg-flag" : "bg-line-strong";
   const titleColor = tone === "clear" ? "text-clear" : tone === "flag" ? "text-flag" : "text-ink";
   return (
-    <section className="mb-8">
-      <div className="mb-2 flex items-end justify-between gap-4">
-        <div>
-          <h2 className={`text-sm font-bold uppercase tracking-wider ${titleColor}`}>{title}</h2>
-          <p className="text-xs text-ink-faint">{subtitle}</p>
+    <section className="mb-7">
+      <div className="mb-2.5 flex items-end justify-between gap-4">
+        <div className="flex items-start gap-2.5">
+          <span className={`mt-1.5 h-2 w-2 rounded-full ${dot}`} />
+          <div>
+            <h2 className={`text-[13px] font-bold uppercase tracking-wider ${titleColor}`}>{title}</h2>
+            <p className="text-xs text-ink-faint">{subtitle}</p>
+          </div>
         </div>
         {action}
       </div>
-      <div className="overflow-x-auto rounded-md border border-line bg-surface">
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
         <div className="min-w-[760px]">{children}</div>
       </div>
     </section>
@@ -311,33 +432,42 @@ function Lane({
 function Row({
   expense,
   tone,
+  index,
+  cursor,
   onSelect,
   busy,
 }: {
   expense: TriagedExpense;
   tone: "clear" | "flag" | "neutral";
+  index: number;
+  cursor: string | null;
   onSelect: (id: string) => void;
   busy?: boolean;
 }) {
-  const railColor =
-    tone === "clear" ? "bg-clear" : tone === "flag" ? "bg-flag" : "bg-line-strong";
+  const ref = useRef<HTMLButtonElement>(null);
+  const active = cursor === expense.id;
+  useEffect(() => {
+    if (active) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+
+  const railColor = tone === "clear" ? "bg-clear" : tone === "flag" ? "bg-flag" : "bg-line-strong";
   const flags = flagsFor(expense);
   return (
     <button
+      ref={ref}
       onClick={() => onSelect(expense.id)}
-      className={`row-in flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left last:border-b-0 hover:bg-paper ${busy ? "pulse-soft" : ""}`}
+      style={{ animationDelay: `${Math.min(index * 22, 200)}ms` }}
+      className={`row-in flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left transition last:border-b-0 hover:bg-paper ${
+        active ? "bg-paper ring-1 ring-inset ring-accent/40" : ""
+      } ${busy ? "reconciling" : ""}`}
     >
       <span className={`lane-rail ${railColor}`} />
-      <span className="figure w-20 shrink-0 text-xs text-ink-faint">{expense.id}</span>
-      <span className="w-36 shrink-0 truncate text-sm font-medium">{expense.employee.name}</span>
-      <span className="hidden w-40 shrink-0 truncate text-sm text-ink-soft md:block">
-        {expense.merchant}
-      </span>
-      <span className="chip bg-neutral-chip text-ink-soft shrink-0">{expense.category}</span>
+      <span className="figure w-[74px] shrink-0 text-xs text-ink-faint">{expense.id}</span>
+      <span className="w-32 shrink-0 truncate text-sm font-medium">{expense.employee.name}</span>
+      <span className="hidden w-36 shrink-0 truncate text-sm text-ink-soft md:block">{expense.merchant}</span>
+      <span className="chip shrink-0 bg-neutral-chip text-ink-soft">{expense.category}</span>
       <span className="min-w-0 flex-1 truncate text-xs text-ink-faint">
-        {busy
-          ? "assistant is investigating…"
-          : expense.aiVerdict?.summary ?? expense.purpose}
+        {busy ? "assistant is investigating…" : expense.aiVerdict?.summary ?? expense.purpose}
       </span>
       <span className="hidden shrink-0 gap-1 lg:flex">
         {flags.slice(0, 2).map((f) => (
@@ -346,9 +476,7 @@ function Row({
           </span>
         ))}
       </span>
-      <span className="figure w-14 shrink-0 text-right text-xs text-ink-faint">
-        {fmtDate(expense.transactionDate)}
-      </span>
+      <span className="figure w-12 shrink-0 text-right text-xs text-ink-faint">{fmtDate(expense.transactionDate)}</span>
       <span className="figure w-20 shrink-0 text-right text-sm font-semibold">
         {fmtMoney(expense.total, expense.currency)}
       </span>

@@ -70,6 +70,10 @@ data/policy.json           │
 
 Auth, real email/Slack sends, payroll integration, editable policy, mobile. The clean domestic receipts are synthetic (generated with Playwright — `scripts/generate-receipts.mjs`), including the deliberately tricky handwritten-tip case and a same-day identical-fare Uber pair. The hard cases use **real** receipt photos.
 
+### Design — "The Reconciliation Desk"
+
+The interface is designed as a calm, precise financial console rather than generic SaaS: Netchex-native slate-navy ink with a teal accent, a warm paper canvas with a faint desk-grid, and **IBM Plex Mono tabular figures** for every amount and id (the ledger feel). The signature element is the **reconciliation ledger** in the evidence panel — Claimed → deductions → Reimburse — so the approver sees the reduced number, not just a flag. Details: a full **dark mode** (no-flash, respects system, manual toggle), a tactile **APPROVED stamp** on decisions, a **"$ recovered"** headline metric (money the assistant caught that shouldn't be reimbursed), keyboard navigation (`j`/`k`/`↵`), and motion that respects `prefers-reduced-motion`. The visual direction was developed with **Claude Design** (claude.ai/design) against a written brief and implemented here.
+
 ### Deployment notes (Vercel + Supabase)
 
 The deployed demo swaps the in-memory store for **Supabase** (Postgres for expense state, Storage for uploaded receipts) because Vercel lambdas are stateless — the backend is chosen by env vars, so `npm run dev` with no Supabase config still works in-memory. Three things a public AI demo needs that localhost doesn't:
