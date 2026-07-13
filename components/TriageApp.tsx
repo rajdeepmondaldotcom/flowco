@@ -301,7 +301,9 @@ function Lane({
         </div>
         {action}
       </div>
-      <div className="overflow-hidden rounded-md border border-line bg-surface">{children}</div>
+      <div className="overflow-x-auto rounded-md border border-line bg-surface">
+        <div className="min-w-[760px]">{children}</div>
+      </div>
     </section>
   );
 }

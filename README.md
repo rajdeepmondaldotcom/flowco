@@ -2,6 +2,8 @@
 
 Prototype for the Netchex Applied AI take-home. One thing, built deeply: **an AI-assisted triage queue for expense approvals** — the assistant does the investigation, the human makes the decision.
 
+**Live demo:** https://flowco-two.vercel.app — click **Run assistant triage** and watch the queue sort itself; open **EXP-1008** for the case the assistant can't resolve on its own. (`/submit` is the optional employee side.) The demo resets to seed data via the **Reset** button.
+
 ## The product idea in one paragraph
 
 Today FlowCo's approver does archaeology on every flagged expense: squint at a receipt, cross-reference a policy doc, search a spreadsheet for duplicates, email the employee, wait, re-review. The AI's job here is **not to approve or reject** — it's to compress "digging" into "deciding." Every expense arrives with the investigation already done: receipt read (including handwritten tips), policy math computed, duplicates compared, and a drafted message to the employee when something's missing. Clean cases pool in a one-click lane; ambiguous cases arrive with the evidence laid out and an explicit list of *what the assistant could not resolve*.
@@ -52,6 +54,16 @@ data/policy.json           │
 ### Deliberately not built
 
 Auth, real email/Slack sends, payroll integration, editable policy, persistence, mobile. Receipt images are synthetic (generated with Playwright — see `scripts/generate-receipts.mjs`), including the deliberately tricky ones: a handwritten tip that changes the total, a EUR hotel folio, and a same-day identical-fare Uber pair.
+
+### Deployment notes (Vercel + Supabase)
+
+The deployed demo swaps the in-memory store for **Supabase** (Postgres for expense state, Storage for uploaded receipts) because Vercel lambdas are stateless — the backend is chosen by env vars, so `npm run dev` with no Supabase config still works in-memory. Three things a public AI demo needs that localhost doesn't:
+
+- **Cost guardrails** — global hourly caps on model calls (atomic SQL counter, `bump_counter`), so an unattended public URL can't burn the API budget. Friendly 429 when the budget is spent.
+- **Timeouts sized for vision calls** — `maxDuration = 120` on the model routes; Opus reading a receipt with thinking enabled is a 10–30s call.
+- **Receipt files traced into the lambda** — `outputFileTracingIncludes` so seeded receipt images are readable server-side on Vercel.
+
+Env vars: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Schema in `supabase/migrations/`.
 
 ### What I'd measure in production
 

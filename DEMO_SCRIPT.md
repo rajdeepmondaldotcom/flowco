@@ -1,6 +1,6 @@
 # 5-minute recording script
 
-> Before recording: `npm run dev`, open `/`, click **Reset**. Have the failure-story screenshots (from `docs/failure-story/`) open in a second tab. Close everything else. Target 4:45 — they said 5 max.
+> Before recording: open https://flowco-two.vercel.app (or `npm run dev` locally), click **Reset**. Have `docs/failure-story/04-...GRAY-ZONE.md` open in a second tab. Close everything else. Target 4:45 — they said 5 max. Bonus closing line: "it's deployed — the link's in the email, try the queue yourself."
 
 ## 0:00–0:30 — Why this slice
 
