@@ -319,9 +319,9 @@ export default function TriageApp() {
 
         <footer className="flex items-center justify-between gap-4 pb-8 pt-2 text-xs text-ink-faint">
           <span>
-            <kbd className="figure rounded border border-line px-1">j</kbd>{" "}
-            <kbd className="figure rounded border border-line px-1">k</kbd> to move ·{" "}
-            <kbd className="figure rounded border border-line px-1">↵</kbd> to open
+            <kbd className="mono rounded border border-line px-1">j</kbd>{" "}
+            <kbd className="mono rounded border border-line px-1">k</kbd> to move ·{" "}
+            <kbd className="mono rounded border border-line px-1">↵</kbd> to open
           </span>
           <span>
             Netchex Applied AI exercise ·{" "}
@@ -388,7 +388,7 @@ function Metric({
     tone === "clear" ? "text-clear" : tone === "flag" ? "text-flag" : tone === "accent" ? "text-accent" : "text-ink";
   return (
     <div className={`px-5 py-4 ${divide ? "border-t border-line md:border-l md:border-t-0" : ""}`}>
-      <div className={`figure text-[26px] font-semibold leading-none ${color}`}>{value}</div>
+      <div className={`figure display text-[27px] font-semibold leading-none ${color}`}>{value}</div>
       <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-faint">{label}</div>
       {sub && <div className="mt-0.5 text-[11px] text-ink-faint">{sub}</div>}
     </div>

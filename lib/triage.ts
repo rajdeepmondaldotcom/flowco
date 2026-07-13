@@ -100,6 +100,8 @@ Rules:
 - FOREIGN CURRENCY: When the receipt is in a different currency than the claim (claims are in USD), fill in "currencyReconciliation" — the receipt total in its own currency, the implied FX rate, and whether that rate is plausible for the date. You cannot verify the exact rate used, so say so and route to a human.
 - Be explicit about what you could NOT resolve. Never paper over ambiguity — an honest "I can't verify X" is the most valuable thing you produce.
 - Policy exceptions are the approver's call, not yours. FlowCo policy allows entertainment above the meals cap at the approver's discretion with a documented business purpose — when you see that pattern, lay out the evidence (per-person math if a group meal) and route to the human.
+- COST CENTER / GL CODE: The deterministic checks tell you whether the claim is coded to the employee's own department cost center. If it's flagged as a possible mis-tag, note the expected vs. actual cost center and draft a one-line confirmation — this is the "wrong cost center" case from the manual workflow. Don't guess the correct code; ask.
+- AMOUNT THRESHOLDS: Anything over $1,000 always requires manager review regardless of how clean it looks — say so plainly. Between the $500 one-click limit and $1,000, note that it's over the one-click threshold and needs a glance.
 - Duplicate candidates always go to the human. Compare the records and say what distinguishes them — a re-submission of the same bill vs. a legitimate split of one large group bill (different items, consecutive bill numbers, same table/time) vs. two genuinely separate purchases. Give the approver the distinguishing evidence.
 - When information is missing or ambiguous, draft a short, friendly, specific message to the employee asking for exactly what is needed — so the approver can send it in one click.
 - Keep the summary tight: it is a queue row, not a report. If money must be deducted (alcohol, FX), lead the summary with the reimbursable amount.`;
@@ -231,7 +233,26 @@ async function claudeVerdict(
   duplicates: TriagedExpense[]
 ): Promise<TriageVerdict> {
   const client = new Anthropic();
-  const image = await loadReceiptImage(expense.receiptUrl);
+
+  // A receipt that fails to load must never crash triage. Fall back to
+  // metadata-only and tell the model so it routes to a human safely.
+  let image: ReceiptImage | null = null;
+  let receiptLoadError = false;
+  if (expense.receiptUrl) {
+    try {
+      image = await loadReceiptImage(expense.receiptUrl);
+    } catch {
+      receiptLoadError = true;
+    }
+  }
+
+  const content = buildUserContent(expense, checks, duplicates, image);
+  if (receiptLoadError && Array.isArray(content)) {
+    content.push({
+      type: "text",
+      text: "NOTE: A receipt is attached to this expense but its image could not be loaded right now. Triage on the metadata and checks only, treat the receipt as unverified, and route to a human so the receipt can be reviewed manually.",
+    });
+  }
 
   const response = await client.messages.parse({
     model: MODEL,
@@ -239,7 +260,7 @@ async function claudeVerdict(
     thinking: { type: "adaptive" },
     output_config: { format: zodOutputFormat(VerdictSchema) },
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserContent(expense, checks, duplicates, image) }],
+    messages: [{ role: "user", content }],
   });
 
   const parsed = response.parsed_output;

@@ -70,12 +70,20 @@ export interface CurrencyCheck {
   note: string;
 }
 
+export interface CostCenterCheck {
+  status: CheckStatus;
+  expected: string;
+  actual: string;
+  note: string;
+}
+
 export interface DeterministicChecks {
   policyCap: PolicyCheck;
   receiptPresence: ReceiptPresenceCheck;
   duplicate: DuplicateCheck;
   amountLimit: AmountLimitCheck;
   currency: CurrencyCheck;
+  costCenter: CostCenterCheck;
 }
 
 // ---- AI verdict (Claude output, schema-constrained) ----

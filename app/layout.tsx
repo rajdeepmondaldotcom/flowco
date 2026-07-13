@@ -1,13 +1,31 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Apple SF Pro — Text for UI/body, Display for large headings & figures.
+const sfText = localFont({
+  variable: "--font-sf-text",
+  display: "swap",
+  src: [
+    { path: "./fonts/SFProText-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/SFProText-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/SFProText-Semibold.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/SFProText-Bold.woff2", weight: "700", style: "normal" },
+  ],
 });
 
+const sfDisplay = localFont({
+  variable: "--font-sf-display",
+  display: "swap",
+  src: [
+    { path: "./fonts/SFProDisplay-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/SFProDisplay-Semibold.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/SFProDisplay-Bold.woff2", weight: "700", style: "normal" },
+  ],
+});
+
+// A monospace, kept only for literal codes (GL / cost-center) and key hints.
 const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],
@@ -30,7 +48,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${sfText.variable} ${sfDisplay.variable} ${plexMono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashTheme }} />

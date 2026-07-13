@@ -10,6 +10,7 @@ const CHECK_LABELS: Record<string, string> = {
   duplicate: "Duplicate scan",
   amountLimit: "Amount limits",
   currency: "Currency",
+  costCenter: "Cost center",
 };
 
 export default function CaseDetail({
@@ -133,7 +134,7 @@ export default function CaseDetail({
                 <div className="my-1.5 border-t border-line-strong" />
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm font-semibold">Reimburse</span>
-                  <span className="figure text-2xl font-bold text-clear">
+                  <span className="figure display text-[26px] font-bold text-clear">
                     {fmtMoney(reimb.value, reimb.currency)}
                   </span>
                 </div>

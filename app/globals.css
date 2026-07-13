@@ -112,8 +112,9 @@
   --color-neutral-chip: var(--neutral-chip);
   --color-stamp: var(--stamp);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-sf-text), -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sf-display), var(--font-sf-text), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
 }
 
 html {
@@ -126,6 +127,13 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.006em; /* SF Pro breathes best with a hair of negative tracking */
+}
+
+/* Large headings & hero numbers use SF Pro Display */
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
 }
 
 /* A faint desk grid — texture without noise */
@@ -135,8 +143,16 @@ body {
   background-size: 28px 28px;
 }
 
-/* Ledger figures — anything auditable is set in mono, tabular */
+/* Ledger figures — money, dates, ids. SF Pro tabular numerals (the Apple
+   Wallet / Stocks treatment): premium, aligned, unmistakably numeric. */
 .figure {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: -0.006em;
+}
+
+/* Literal system codes (GL / cost-center) and key hints stay monospace. */
+.mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;

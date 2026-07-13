@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     draft: {
       merchant: string | null;
       category: "meals" | "travel" | "lodging" | "software" | "other" | null;
+      receiptCurrency?: string | null;
       transactionDate: string | null;
       amount: number | null;
       tax: number | null;
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     merchant: draft.merchant,
     transactionDate: draft.transactionDate ?? new Date().toISOString().slice(0, 10),
     currency: "USD",
-    receiptCurrency: "USD",
+    receiptCurrency: (draft.receiptCurrency || "USD").toUpperCase().slice(0, 3),
     amount: draft.amount ?? draft.total,
     tax: draft.tax ?? 0,
     tip: draft.tip ?? 0,

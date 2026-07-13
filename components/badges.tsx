@@ -24,8 +24,10 @@ export function flagsFor(e: TriagedExpense): string[] {
   if (v.engine !== "mock" && v.nonReimbursable && v.nonReimbursable.subtotalExcluded > 0.005)
     flags.push("alcohol / non-reimbursable");
   if (e.checks.policyCap.status === "fail") flags.push("over cap");
+  if (e.checks.amountLimit.status === "fail") flags.push("over $1,000");
   if (e.checks.duplicate.status === "warn") flags.push("possible duplicate");
   if (e.checks.receiptPresence.status === "fail") flags.push("missing receipt");
+  if (e.checks.costCenter.status === "warn") flags.push("wrong cost center");
   if (e.checks.currency.status === "warn") flags.push("foreign currency");
   if (
     v.engine !== "mock" &&

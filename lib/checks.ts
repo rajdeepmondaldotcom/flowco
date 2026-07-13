@@ -6,6 +6,17 @@ import type { DeterministicChecks, Expense, Policy } from "./types";
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
+// The GL cost center each department books to. A claim tagged to a different
+// department's cost center is a likely mis-pick from the "long dropdown" the
+// PDF describes — surface it for the approver.
+export const DEPARTMENT_COST_CENTERS: Record<string, string> = {
+  Sales: "CC-2100 Sales",
+  "Customer Success": "CC-2400 CS",
+  Product: "CC-3300 Product",
+  Engineering: "CC-3100 Engineering",
+  Marketing: "CC-2600 Marketing",
+};
+
 export function runChecks(expense: Expense, all: Expense[], policy: Policy): DeterministicChecks {
   return {
     policyCap: policyCapCheck(expense, policy),
@@ -13,6 +24,22 @@ export function runChecks(expense: Expense, all: Expense[], policy: Policy): Det
     duplicate: duplicateCheck(expense, all, policy),
     amountLimit: amountLimitCheck(expense, policy),
     currency: currencyCheck(expense, policy),
+    costCenter: costCenterCheck(expense),
+  };
+}
+
+function costCenterCheck(expense: Expense) {
+  const expected = DEPARTMENT_COST_CENTERS[expense.employee.department] ?? "";
+  // Compare on the CC code prefix so label variations don't cause noise.
+  const code = (s: string) => s.trim().split(/\s+/)[0];
+  const mismatch = expected !== "" && code(expense.costCenter) !== code(expected);
+  return {
+    status: mismatch ? ("warn" as const) : ("pass" as const),
+    expected,
+    actual: expense.costCenter,
+    note: mismatch
+      ? `Coded to ${expense.costCenter}, but ${expense.employee.name.split(" ")[0]} is in ${expense.employee.department} (${expected}) — possible mis-tag`
+      : `Cost center ${expense.costCenter} matches ${expense.employee.department}`,
   };
 }
 

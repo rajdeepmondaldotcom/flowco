@@ -11,6 +11,9 @@ const MODEL = process.env.TRIAGE_MODEL || "claude-opus-4-8";
 const DraftSchema = z.object({
   merchant: z.string().nullable(),
   category: z.enum(["meals", "travel", "lodging", "software", "other"]).nullable(),
+  receiptCurrency: z
+    .string()
+    .describe("3-letter currency on the receipt/described (e.g. USD, EUR, INR). Default USD if unstated."),
   transactionDate: z
     .string()
     .nullable()
