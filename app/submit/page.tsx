@@ -4,8 +4,16 @@ import Link from "next/link";
 import { useState } from "react";
 import { fmtMoney } from "@/components/badges";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useToast } from "@/components/Toast";
 import type { Employee } from "@/lib/types";
 import type { ExpenseDraft } from "@/lib/extract";
+
+const EXAMPLES = [
+  "Team lunch at Chipotle yesterday after the sprint review, about $34, receipt attached",
+  "Uber from the office to the client QBR this morning, $32.75",
+  "Figma seat for July, $45, billed to my card",
+  "Dinner with a candidate at Nopa last night, around 90 euros, cash — no receipt yet",
+];
 
 const EMPLOYEES: Employee[] = [
   { name: "Priya Sharma", email: "priya.sharma@flowco.com", department: "Sales" },
@@ -25,6 +33,18 @@ export default function SubmitPage() {
   const [phase, setPhase] = useState<Phase>("compose");
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+
+  const stepNo = phase === "done" ? 3 : phase === "review" || phase === "submitting" ? 2 : 1;
+
+  const reset = () => {
+    setDescription("");
+    setImage(null);
+    setDraft(null);
+    setSubmittedId(null);
+    setError(null);
+    setPhase("compose");
+  };
 
   const onFile = (file: File | undefined) => {
     if (!file) return;
@@ -79,6 +99,7 @@ export default function SubmitPage() {
       if (!res.ok) throw new Error(data.error);
       setSubmittedId(data.expense.id);
       setPhase("done");
+      toast({ title: `Submitted · ${data.expense.id}`, description: "It's in the approvals queue", tone: "success" });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setPhase("review");
@@ -112,8 +133,10 @@ export default function SubmitPage() {
       </header>
 
       <main className="mx-auto max-w-xl px-6 py-8">
+        <Stepper current={stepNo} />
+
         {error && (
-          <div className="mb-4 rounded border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
+          <div className="mb-4 rounded-lg border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
             {error}
           </div>
         )}
@@ -141,8 +164,27 @@ export default function SubmitPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Team lunch at Chipotle yesterday after the sprint review, $34.20 total, receipt attached"
-              className="mb-4 w-full rounded border border-line px-3 py-2 text-sm focus:border-accent focus:outline-none"
+              className="mb-2 w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-accent focus:outline-none"
             />
+
+            {description.trim().length === 0 && (
+              <div className="mb-4">
+                <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+                  Or start from an example
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {EXAMPLES.map((ex) => (
+                    <button
+                      key={ex}
+                      onClick={() => setDescription(ex)}
+                      className="rounded-full border border-line bg-surface px-2.5 py-1 text-left text-xs text-ink-soft transition hover:border-accent hover:text-accent"
+                    >
+                      {ex.length > 42 ? ex.slice(0, 42) + "…" : ex}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <label className="mb-1 block text-xs font-medium text-ink-faint">Receipt photo (optional)</label>
             <input
@@ -221,20 +263,76 @@ export default function SubmitPage() {
         )}
 
         {phase === "done" && (
-          <div className="rounded-xl border border-line bg-surface p-6 text-center shadow-sm">
-            <div className="mb-1 text-2xl">✓</div>
-            <h2 className="mb-1 text-base font-semibold">
-              Submitted — <span className="figure">{submittedId}</span>
+          <div className="fade-in rounded-xl border border-line bg-surface p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-clear-soft text-clear">
+              <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold">
+              Sent to approvals · <span className="figure">{submittedId}</span>
             </h2>
-            <p className="mb-4 text-sm text-ink-soft">
-              It&apos;s in the approvals queue and will be triaged with everything else.
+            <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+              That&apos;s it — no seven screens. The assistant will read it, run the checks, and your approver only
+              sees it if something needs a look.
             </p>
-            <Link href="/" className="text-sm font-medium text-accent underline">
-              See it in the approver view →
-            </Link>
+            <div className="mt-5 flex items-center justify-center gap-2">
+              <button
+                onClick={reset}
+                className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+              >
+                Submit another
+              </button>
+              <Link
+                href="/"
+                className="rounded-md border border-line-strong px-4 py-2 text-sm font-medium text-ink-soft hover:bg-paper"
+              >
+                See the approver view →
+              </Link>
+            </div>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function Stepper({ current }: { current: number }) {
+  const steps = ["Describe", "Review", "Submitted"];
+  return (
+    <div className="mb-6 flex items-center">
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const done = n < current;
+        const active = n === current;
+        return (
+          <div key={label} className="flex flex-1 items-center last:flex-none">
+            <div className="flex items-center gap-2">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition ${
+                  done
+                    ? "bg-clear text-white"
+                    : active
+                      ? "bg-accent text-white"
+                      : "bg-neutral-chip text-ink-faint"
+                }`}
+              >
+                {done ? (
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  n
+                )}
+              </span>
+              <span className={`text-xs font-medium ${active || done ? "text-ink" : "text-ink-faint"}`}>{label}</span>
+            </div>
+            {n < steps.length && (
+              <span className={`mx-3 h-px flex-1 ${done ? "bg-clear" : "bg-line"}`} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

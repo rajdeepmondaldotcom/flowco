@@ -16,6 +16,19 @@ export const fmtDateTime = (iso: string) =>
     minute: "2-digit",
   }).format(new Date(iso));
 
+// Plain-English tooltip for each flag — recognition over recall.
+export const FLAG_EXPLAIN: Record<string, string> = {
+  "alcohol / non-reimbursable": "The receipt lists alcohol, which policy says isn't reimbursable — the assistant deducted it.",
+  "over cap": "The amount exceeds this category's policy cap.",
+  "over $1,000": "Anything over $1,000 always needs manager review.",
+  "possible duplicate": "Same employee and merchant nearby in time — could be a re-submission or a split bill.",
+  "missing receipt": "No receipt attached, and one is required over $25.",
+  "wrong cost center": "Coded to a cost center that doesn't match the employee's department.",
+  "foreign currency": "The receipt is in a different currency than the claim; the FX rate can't be verified in code.",
+  "ambiguous receipt": "The receipt didn't cleanly reconcile against the claim.",
+  "low confidence": "The assistant wasn't confident enough to clear this on its own.",
+};
+
 // Which flag types apply to a triaged expense — drives the badges in the review lane.
 export function flagsFor(e: TriagedExpense): string[] {
   const flags: string[] = [];

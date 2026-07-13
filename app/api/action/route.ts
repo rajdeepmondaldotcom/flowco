@@ -14,6 +14,20 @@ export async function POST(request: NextRequest) {
   if (!expense) {
     return NextResponse.json({ error: `Unknown expense ${id}` }, { status: 404 });
   }
+
+  // Undo: return a resolved expense to the review lane.
+  if (action === "revert") {
+    expense.status = "triaged";
+    expense.audit.push({
+      at: new Date().toISOString(),
+      actor: "approver",
+      action: "revert",
+      detail: "Decision undone — back in the review queue",
+    });
+    await putExpense(expense);
+    return NextResponse.json({ expense });
+  }
+
   const status = ACTION_TO_STATUS[action];
   if (!status) {
     return NextResponse.json({ error: `Unknown action ${action}` }, { status: 400 });
