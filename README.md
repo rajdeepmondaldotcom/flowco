@@ -95,6 +95,15 @@ Auth, real email/Slack sends, payroll integration, editable policy, mobile. The 
 
 The interface is designed as a calm, precise financial console rather than generic SaaS: Netchex-native slate-navy ink with a teal accent and a warm paper canvas with a faint desk-grid. Typography is **Apple SF Pro** — SF Pro Text for the UI, SF Pro Display for headings and hero numbers, with **tabular numerals** for every amount (the treatment Apple uses in Wallet, Stocks, and Numbers); a monospace is kept only for literal GL codes and key hints. The signature element is the **reconciliation ledger** in the evidence panel — Claimed → deductions → Reimburse — so the approver sees the reduced number, not just a flag. Details: a full **dark mode** (no-flash, respects system, manual toggle), a tactile **APPROVED stamp** on decisions, a **"$ recovered"** headline metric (money the assistant caught that shouldn't be reimbursed), keyboard navigation (`j`/`k`/`↵`), and motion that respects `prefers-reduced-motion`. The visual direction was developed with **Claude Design** (claude.ai/design) against a written brief and implemented here.
 
+**Designed to not make you think.** The whole app is built against the Laws of UX and Nielsen's heuristics, corner to corner:
+
+- **Onboarding & recognition** — a first-run banner with one clear CTA and a 3-step "how it works"; example prompts on the employee form; a `?` keyboard-shortcut overlay. Nobody needs a manual (Paradox of the Active User, Recognition-over-Recall).
+- **Flow for the approver** — open a case, decide with a **sticky always-reachable Approve/Request-info/Reject bar** (Fitts), and **auto-advance to the next case**; `a`/`r` to decide, `←/→` and `j/k` to move. Clear the whole review lane without touching the mouse.
+- **System status** — skeleton rows on load, a live triage progress bar, per-row "investigating…" shimmer, and a count-up on the "$ recovered" metric (Doherty <400ms feel).
+- **User control & recovery** — every decision raises a toast with **Undo** (real revert, audited); errors offer **Retry**; resolved cases can be moved back to review (Nielsen #3/#9, Peak-End).
+- **Findability without overwhelm** — search + flag-filter chips with counts and tooltips, lane count badges; the queue leads with the assistant's one-line rationale so the eye lands on the decision, not the chrome (Hick, Von Restorff).
+- **A satisfying end** — an "all caught up" inbox-zero state with the session's tally; a warm "sent to approvals" success on submit (Peak-End, Zeigarnik).
+
 > **Font licensing note:** the SF Pro web fonts are subset to `app/fonts/*.woff2`. Apple's SF fonts are free to use in UI design but their license restricts web-embedding to Apple-platform apps — fine for this private prototype, but before making the repo public or shipping to real users, swap SF Pro for a licensed web equivalent (e.g. Inter, or an Apple-licensed webfont). One-line change in `app/layout.tsx`.
 
 ### Deployment notes (Vercel + Supabase)
