@@ -1,0 +1,21 @@
+{
+  "claimCurrency": "USD",
+  "categoryCaps": {
+    "meals": 100,
+    "travel": 500,
+    "lodging": 250,
+    "software": 200,
+    "other": 100
+  },
+  "receiptRequiredAbove": 25,
+  "autoApproveLimit": 500,
+  "hardReviewLimit": 1000,
+  "duplicateWindowDays": 3,
+  "notes": [
+    "Category caps are per expense. Lodging cap is per night.",
+    "Receipts are required for any expense over $25.",
+    "Expenses under $500 with all checks passing may be cleared in one click.",
+    "Anything over $1,000 always requires manager review.",
+    "Client entertainment above the meals cap may be approved at the approver's discretion with a documented business purpose."
+  ]
+}

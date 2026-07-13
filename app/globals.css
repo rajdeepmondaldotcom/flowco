@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f7f4;
+  --color-surface: #ffffff;
+  --color-ink: #17211d;
+  --color-ink-soft: #4d5a53;
+  --color-ink-faint: #8a958e;
+  --color-line: #e1e5df;
+  --color-line-strong: #c9cfc7;
+
+  --color-clear: #1c7346;
+  --color-clear-soft: #e5f2ea;
+  --color-flag: #a05e1a;
+  --color-flag-soft: #f7ecdd;
+  --color-danger: #a33430;
+  --color-danger-soft: #f6e7e6;
+  --color-accent: #0d5c63;
+  --color-accent-soft: #e3eeef;
+  --color-neutral-chip: #eceee9;
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ledger figures — anything auditable is set in mono */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.lane-rail {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.row-in {
+  animation: row-in 0.25s ease-out both;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.pulse-soft {
+  animation: pulse-soft 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-in,
+  .pulse-soft {
+    animation: none;
+  }
+}
