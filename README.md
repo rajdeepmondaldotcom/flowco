@@ -20,6 +20,26 @@ The hard cases in the demo are **real receipts** — crumpled, shadowed phone ph
 
 The clean domestic (USD) receipts auto-clear; the real foreign receipts with alcohol/splits get the full investigation and route to a human. That split is the product.
 
+## Every flag reason in the PDF, covered
+
+The PDF's manual workflow lists exactly what makes an approver stop and dig. Each one is now a deterministic check **and** a seed case you can watch the assistant handle:
+
+| PDF flag reason | Check (code) | Seed case that exercises it |
+|---|---|---|
+| Amount vs. policy cap not enforced | `policyCap` | EXP-1009 Capital Grille over meals cap |
+| Receipt doesn't match claimed amount | model reconciliation | EXP-1008 handwritten-tip mismatch |
+| Missing receipt | `receiptPresence` | EXP-1018 $63 lunch, no receipt (required over $25) |
+| Wrong cost center / GL code | `costCenter` (dept→GL map) | EXP-1017 Marketing expense coded to Engineering |
+| Over $1,000 → always manager review | `amountLimit` | EXP-1019 $1,180 international flight |
+| Over $500 → beyond one-click | `amountLimit` | EXP-1020 $680 conference pass |
+| Possible duplicate → check past submissions | `duplicate` | EXP-1010/1011 Uber round-trip; EXP-1014/1015 split bill |
+| Policy exception (discretion) | `policyCap` + model | EXP-1013 alcohol dinner; EXP-1009 client dinner |
+| Ambiguous receipt | model (vision) | EXP-1008; the real Goa receipts |
+| Foreign currency | `currency` + model FX | EXP-1012 EUR; EXP-1013–1016 INR |
+| Under $500 & everything matches → one-click | all checks pass | EXP-1001–1007 auto-clear lane |
+
+The employee side (`/submit`) collapses the seven-screen form into one sentence + a photo: the same engine reads it, fills every field including **currency**, shows the extracted draft back to confirm (the PDF's "OCR'd amount shown back"), auto-picks the cost center, and drops it into the approver's queue.
+
 ## Running it
 
 ```bash
@@ -40,8 +60,9 @@ data/expenses.json  ──►  in-memory store (no DB, on purpose)
 data/policy.json           │
                            ▼
               ┌─ lib/checks.ts ───────────── deterministic: policy caps, duplicate
-              │                              detection, amount limits, receipt
-              │                              presence, currency (pure code)
+              │                              detection, amount limits ($500/$1,000),
+              │                              receipt presence, cost-center match,
+              │                              currency (pure code)
               │
               ├─ lib/triage.ts ───────────── Claude (claude-opus-4-8): reads the
               │                              receipt image, finds alcohol/non-
@@ -72,7 +93,9 @@ Auth, real email/Slack sends, payroll integration, editable policy, mobile. The 
 
 ### Design — "The Reconciliation Desk"
 
-The interface is designed as a calm, precise financial console rather than generic SaaS: Netchex-native slate-navy ink with a teal accent, a warm paper canvas with a faint desk-grid, and **IBM Plex Mono tabular figures** for every amount and id (the ledger feel). The signature element is the **reconciliation ledger** in the evidence panel — Claimed → deductions → Reimburse — so the approver sees the reduced number, not just a flag. Details: a full **dark mode** (no-flash, respects system, manual toggle), a tactile **APPROVED stamp** on decisions, a **"$ recovered"** headline metric (money the assistant caught that shouldn't be reimbursed), keyboard navigation (`j`/`k`/`↵`), and motion that respects `prefers-reduced-motion`. The visual direction was developed with **Claude Design** (claude.ai/design) against a written brief and implemented here.
+The interface is designed as a calm, precise financial console rather than generic SaaS: Netchex-native slate-navy ink with a teal accent and a warm paper canvas with a faint desk-grid. Typography is **Apple SF Pro** — SF Pro Text for the UI, SF Pro Display for headings and hero numbers, with **tabular numerals** for every amount (the treatment Apple uses in Wallet, Stocks, and Numbers); a monospace is kept only for literal GL codes and key hints. The signature element is the **reconciliation ledger** in the evidence panel — Claimed → deductions → Reimburse — so the approver sees the reduced number, not just a flag. Details: a full **dark mode** (no-flash, respects system, manual toggle), a tactile **APPROVED stamp** on decisions, a **"$ recovered"** headline metric (money the assistant caught that shouldn't be reimbursed), keyboard navigation (`j`/`k`/`↵`), and motion that respects `prefers-reduced-motion`. The visual direction was developed with **Claude Design** (claude.ai/design) against a written brief and implemented here.
+
+> **Font licensing note:** the SF Pro web fonts are subset to `app/fonts/*.woff2`. Apple's SF fonts are free to use in UI design but their license restricts web-embedding to Apple-platform apps — fine for this private prototype, but before making the repo public or shipping to real users, swap SF Pro for a licensed web equivalent (e.g. Inter, or an Apple-licensed webfont). One-line change in `app/layout.tsx`.
 
 ### Deployment notes (Vercel + Supabase)
 

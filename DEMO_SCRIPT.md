@@ -33,6 +33,7 @@
   - "So the real failure wasn't reading — it was that **a capable model given decision authority becomes an unpredictable decision-maker in exactly the ambiguous cases where the decision matters**. Plus the outputs drifted shape between runs — number vs string, approve vs approved — which breaks any queue built on top."
   - "Three changes fixed it: routing became a code guardrail — any mismatch or failed check goes to a human, one hundred percent of the time, the model can only make routing stricter; the recommendation is schema-constrained to actions that actually exist; and 'what I couldn't resolve' is a required output field, so uncertainty has somewhere to go other than being papered over. Same $85 case in the final build — routed to a human every time, with the fifty-cent delta called out and the clarification message pre-drafted." (Show EXP-1008 again if time.)
 - "The split that matters: deterministic code for money math and routing, the model for reading, reconciling, explaining, drafting."
+- Optional breadth line (only if asked): "Every flag reason the manual workflow names — wrong cost center, missing receipt, over-$1,000, duplicates, over-cap, foreign currency — has both a deterministic check and a case you can watch it handle. But the depth is in the alcohol case, so that's where I spent the time."
 
 ## 4:30–5:00 — Close
 
