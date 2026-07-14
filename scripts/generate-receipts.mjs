@@ -63,7 +63,7 @@ const receipts = [
     html: `<div class="card">
       <div class="head" style="background:#1e1e1e"><div style="font-size:20px;font-weight:700">Figma</div><div style="opacity:.75;font-size:13px;margin-top:4px">Receipt #FIG-2026-078412</div></div>
       <div class="body">
-        <div class="row"><span class="muted">Billed to</span><span>dana.kim@flowco.com</span></div>
+        <div class="row"><span class="muted">Billed to</span><span>ananya.iyer@flowco.com</span></div>
         <div class="row"><span class="muted">Date paid</span><span>July 1, 2026</span></div>
         <div class="row rule"><span>Figma Professional — 1 editor seat (monthly)</span><span>$45.00</span></div>
         <div class="row"><span class="muted">Tax</span><span>$0.00</span></div>
@@ -75,7 +75,7 @@ const receipts = [
   {
     id: "exp-1003",
     html: `<div class="card">
-      <div class="head" style="background:#000"><div style="font-size:20px;font-weight:700">Uber</div><div style="opacity:.8;font-size:13px;margin-top:4px">July 8, 2026 — Thanks for riding, Marcus</div></div>
+      <div class="head" style="background:#000"><div style="font-size:20px;font-weight:700">Uber</div><div style="opacity:.8;font-size:13px;margin-top:4px">July 8, 2026 — Thanks for riding, Arjun</div></div>
       <div class="body">
         <div class="row"><span class="muted">2:12 PM</span><span>FlowCo HQ, 500 Howard St</span></div>
         <div class="row"><span class="muted">2:47 PM</span><span>Brightline, 1 Market Plaza</span></div>
@@ -92,7 +92,7 @@ const receipts = [
     html: `<div class="card">
       <div class="head" style="background:#123c6e"><div style="font-size:19px;font-weight:700">Hampton Inn — Austin Downtown</div><div style="opacity:.8;font-size:13px;margin-top:4px">Guest Folio — Conf #H8834921</div></div>
       <div class="body">
-        <div class="row"><span class="muted">Guest</span><span>Elena Rodriguez</span></div>
+        <div class="row"><span class="muted">Guest</span><span>Kavya Reddy</span></div>
         <div class="row"><span class="muted">Stay</span><span>Jul 9 – Jul 10, 2026 (1 night)</span></div>
         <div class="row rule"><span>Room 412 — King, 07/09</span><span>$168.75</span></div>
         <div class="row"><span>State & occupancy tax</span><span>$20.25</span></div>
@@ -111,7 +111,7 @@ const receipts = [
       ${thermalItems([["SUBTOTAL", "62.40"], ["TAX", "5.40"]])}
       <div class="row total-row"><span>TOTAL</span><span>$67.80</span></div>
       <div class="rule"></div>
-      <div class="center meta">AMEX **** 2214 — APPROVED<br>ORDER FOR: JAMES</div>
+      <div class="center meta">AMEX **** 2214 — APPROVED<br>ORDER FOR: ROHAN</div>
     </div>`,
   },
   {
@@ -162,7 +162,7 @@ const receipts = [
   {
     id: "exp-1010",
     html: `<div class="card">
-      <div class="head" style="background:#000"><div style="font-size:20px;font-weight:700">Uber</div><div style="opacity:.8;font-size:13px;margin-top:4px">July 9, 2026 — Thanks for riding, Marcus</div></div>
+      <div class="head" style="background:#000"><div style="font-size:20px;font-weight:700">Uber</div><div style="opacity:.8;font-size:13px;margin-top:4px">July 9, 2026 — Thanks for riding, Arjun</div></div>
       <div class="body">
         <div class="row"><span class="muted">8:05 AM</span><span>SFO Terminal 2</span></div>
         <div class="row"><span class="muted">8:41 AM</span><span>Brightline, 1 Market Plaza</span></div>
@@ -177,7 +177,7 @@ const receipts = [
   {
     id: "exp-1011",
     html: `<div class="card">
-      <div class="head" style="background:#000"><div style="font-size:20px;font-weight:700">Uber</div><div style="opacity:.8;font-size:13px;margin-top:4px">July 9, 2026 — Thanks for riding, Marcus</div></div>
+      <div class="head" style="background:#000"><div style="font-size:20px;font-weight:700">Uber</div><div style="opacity:.8;font-size:13px;margin-top:4px">July 9, 2026 — Thanks for riding, Arjun</div></div>
       <div class="body">
         <div class="row"><span class="muted">6:40 PM</span><span>Brightline, 1 Market Plaza</span></div>
         <div class="row"><span class="muted">7:22 PM</span><span>SFO Terminal 2</span></div>
@@ -194,7 +194,7 @@ const receipts = [
     html: `<div class="card">
       <div class="head" style="background:#6b5b3e"><div style="font-size:19px;font-weight:700">Hotel Adlon Kempinski Berlin</div><div style="opacity:.85;font-size:13px;margin-top:4px">Rechnung / Guest Folio — Nr. 202607-4471</div></div>
       <div class="body">
-        <div class="row"><span class="muted">Gast</span><span>Dana Kim</span></div>
+        <div class="row"><span class="muted">Gast</span><span>Ananya Iyer</span></div>
         <div class="row"><span class="muted">Aufenthalt</span><span>02.07 – 03.07.2026 (1 Nacht)</span></div>
         <div class="row rule"><span>Deluxe Zimmer — 1 Nacht</span><span>€190.19</span></div>
         <div class="row"><span>City Tax Berlin</span><span>€13.31</span></div>

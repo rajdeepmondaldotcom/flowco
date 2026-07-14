@@ -44,7 +44,7 @@ const html = `<!doctype html><html><head>
   <div class="rule"></div>
   <div class="row meta" style="align-items:baseline"><span>TIP</span><span class="hand" style="transform:rotate(-4deg) translateY(2px);display:inline-block">8.30</span></div>
   <div class="row meta" style="align-items:baseline; margin-top:8px"><span>TOTAL</span><span></span></div>
-  <div class="row meta" style="margin-top:6px; align-items:baseline"><span>SIGN:</span><span class="hand" style="font-size:21px">M Webb</span></div>
+  <div class="row meta" style="margin-top:6px; align-items:baseline"><span>SIGN:</span><span class="hand" style="font-size:21px">A Nair</span></div>
   <div class="rule"></div>
   <div class="center meta">VISA **** 7719 — CUSTOMER COPY</div>
 </div>

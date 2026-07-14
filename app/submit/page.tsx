@@ -16,17 +16,18 @@ const EXAMPLES = [
 ];
 
 const EMPLOYEES: Employee[] = [
+  { name: "Rajdeep Mondal", email: "rajdeep.mondal@flowco.com", department: "Engineering" },
   { name: "Priya Sharma", email: "priya.sharma@flowco.com", department: "Sales" },
-  { name: "Dana Kim", email: "dana.kim@flowco.com", department: "Product" },
-  { name: "Marcus Webb", email: "marcus.webb@flowco.com", department: "Customer Success" },
-  { name: "Elena Rodriguez", email: "elena.rodriguez@flowco.com", department: "Engineering" },
-  { name: "James Okafor", email: "james.okafor@flowco.com", department: "Marketing" },
+  { name: "Ananya Iyer", email: "ananya.iyer@flowco.com", department: "Product" },
+  { name: "Arjun Nair", email: "arjun.nair@flowco.com", department: "Customer Success" },
+  { name: "Kavya Reddy", email: "kavya.reddy@flowco.com", department: "Engineering" },
+  { name: "Rohan Gupta", email: "rohan.gupta@flowco.com", department: "Marketing" },
 ];
 
 type Phase = "compose" | "extracting" | "review" | "submitting" | "done";
 
 export default function SubmitPage() {
-  const [employee, setEmployee] = useState(EMPLOYEES[2]);
+  const [employee, setEmployee] = useState(EMPLOYEES[0]);
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<{ base64: string; mediaType: "image/png" | "image/jpeg"; preview: string } | null>(null);
   const [draft, setDraft] = useState<ExpenseDraft | null>(null);

@@ -28,7 +28,7 @@ const receipts = [
     html: `<div class="card" style="--rot:-0.6deg">
       <div class="head" style="background:#5e6ad2"><div style="font-size:20px;font-weight:700">Linear</div><div style="opacity:.8;font-size:13px;margin-top:4px">Receipt LIN-2026-04471</div></div>
       <div class="body">
-        <div class="row"><span class="muted">Billed to</span><span>james.okafor@flowco.com</span></div>
+        <div class="row"><span class="muted">Billed to</span><span>rohan.gupta@flowco.com</span></div>
         <div class="row"><span class="muted">Date paid</span><span>July 2, 2026</span></div>
         <div class="row rule"><span>Linear — Standard, 1 seat (monthly)</span><span>$16.00</span></div>
         <div class="row"><span class="muted">Tax</span><span>$0.00</span></div>
@@ -42,7 +42,7 @@ const receipts = [
     html: `<div class="card" style="--rot:0.5deg">
       <div class="head" style="background:#002244"><div style="font-size:20px;font-weight:700">UNITED</div><div style="opacity:.8;font-size:13px;margin-top:4px">eTicket Receipt — 016 2274839001</div></div>
       <div class="body">
-        <div class="row"><span class="muted">Passenger</span><span>RODRIGUEZ/ELENA</span></div>
+        <div class="row"><span class="muted">Passenger</span><span>REDDY/KAVYA</span></div>
         <div class="row"><span class="muted">Itinerary</span><span>SFO ⇄ BER — Jul 20 / Jul 25, 2026</span></div>
         <div class="row"><span class="muted">Cabin</span><span>Economy (round trip, intl)</span></div>
         <div class="row rule"><span>Base fare</span><span>$1,058.00</span></div>
@@ -55,9 +55,9 @@ const receipts = [
   {
     id: "exp-1020",
     html: `<div class="card" style="--rot:-0.5deg">
-      <div class="head" style="background:#0f766e"><div style="font-size:19px;font-weight:700">SaaStr Annual 2026</div><div style="opacity:.85;font-size:13px;margin-top:4px">Registration confirmation — #SA26-33418</div></div>
+      <div class="head" style="background:#0f766e"><div style="font-size:19px;font-weight:700">HR Tech 2026</div><div style="opacity:.85;font-size:13px;margin-top:4px">Registration confirmation — #HRT26-33418</div></div>
       <div class="body">
-        <div class="row"><span class="muted">Attendee</span><span>James Okafor</span></div>
+        <div class="row"><span class="muted">Attendee</span><span>Rohan Gupta</span></div>
         <div class="row"><span class="muted">Date</span><span>July 6, 2026</span></div>
         <div class="row rule"><span>Full Conference Pass — Early Bird</span><span>$680.00</span></div>
         <div class="row"><span class="muted">Tax</span><span>$0.00</span></div>
