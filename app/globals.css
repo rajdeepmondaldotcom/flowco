@@ -15,7 +15,7 @@
   --surface-2: #faf9f4;
   --ink: #111820;
   --ink-soft: #495663;
-  --ink-faint: #8b95a1;
+  --ink-faint: #5f6a76; /* ≥4.5:1 on paper and surface (WCAG AA normal text) */
   --line: #e6e3da;
   --line-strong: #d3cfc4;
 
@@ -43,7 +43,7 @@
     --surface-2: #1b2531;
     --ink: #eaeef3;
     --ink-soft: #a4afbc;
-    --ink-faint: #6a7683;
+    --ink-faint: #828e9c; /* ≥4.5:1 on all dark surfaces (WCAG AA normal text) */
     --line: #26303d;
     --line-strong: #34404f;
 
@@ -71,7 +71,7 @@
   --surface-2: #1b2531;
   --ink: #eaeef3;
   --ink-soft: #a4afbc;
-  --ink-faint: #6a7683;
+  --ink-faint: #828e9c; /* ≥4.5:1 on all dark surfaces (WCAG AA normal text) */
   --line: #26303d;
   --line-strong: #34404f;
 
@@ -183,6 +183,15 @@ body {
   outline: none;
   box-shadow: var(--ring);
   border-radius: 4px;
+}
+
+/* Dialog containers receive programmatic focus (focus trap) but aren't
+   interactive controls — no ring around the whole panel. Restore the
+   element's own Tailwind shadow utilities instead of the focus ring. */
+[role="dialog"][tabindex="-1"]:focus-visible {
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000);
 }
 
 /* The approval stamp — one tactile moment */

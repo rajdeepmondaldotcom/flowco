@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Policy, TriagedExpense } from "@/lib/types";
-import { FLAG_EXPLAIN, flagsFor, nativeReceiptAmount, fmtDate, fmtMoney, StatusChip } from "./badges";
+import { FLAG_EXPLAIN, flagsFor, nativeReceiptAmount, fmtDate, StatusChip } from "./badges";
 import CurrencyToggle from "./CurrencyToggle";
 import { useDisplayCurrency, useMoney } from "./DisplayCurrency";
 import CaseDetail from "./CaseDetail";
 import ThemeToggle from "./ThemeToggle";
 import { useToast } from "./Toast";
+import { useFocusTrap } from "./useFocusTrap";
 
 const TRIAGE_CONCURRENCY = 3;
 
@@ -40,13 +41,17 @@ export default function TriageApp() {
       setExpenses(data.expenses);
       setPolicy(data.policy);
       setMockMode(data.mockMode);
+    } catch {
+      setError("Couldn't reach the server — check the connection and retry.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Kick the initial load off the synchronous effect path — the effect body
+    // itself stays free of state updates (react-hooks/set-state-in-effect).
+    queueMicrotask(refresh);
   }, [refresh]);
 
   const updateExpense = (updated: TriagedExpense) =>
@@ -99,33 +104,55 @@ export default function TriageApp() {
     setRunning(false);
   }, [expenses, triageOne, refresh]);
 
-  const revert = useCallback(async (id: string) => {
-    const res = await fetch("/api/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action: "revert" }),
-    });
-    const data = await res.json();
-    if (res.ok) updateExpense(data.expense);
-  }, []);
+  // Named function expressions: the Retry closures reference the function by
+  // its own name, not the const binding (which isn't initialized yet).
+  const revert = useCallback(
+    async function revertExpense(id: string) {
+      try {
+        const res = await fetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, action: "revert" }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        updateExpense(data.expense);
+      } catch (err) {
+        toast({
+          title: "Couldn't undo that",
+          description: err instanceof Error && err.message ? err.message : "Please try again",
+          tone: "danger",
+          action: { label: "Retry", onClick: () => revertExpense(id) },
+        });
+      }
+    },
+    [toast]
+  );
 
   const act = useCallback(
-    async (id: string, action: "approve" | "reject" | "request_info", message?: string) => {
+    async function actOnExpense(
+      id: string,
+      action: "approve" | "reject" | "request_info",
+      message?: string
+    ): Promise<boolean> {
       const before = expenses.find((e) => e.id === id);
-      const res = await fetch("/api/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, action, message }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
+      let data: { expense?: TriagedExpense; error?: string } | null = null;
+      try {
+        const res = await fetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, action, message }),
+        });
+        data = await res.json();
+        if (!res.ok || !data?.expense) throw new Error(data?.error);
+      } catch (err) {
         toast({
           title: "Couldn't save that",
-          description: data.error ?? "Please try again",
+          description: err instanceof Error && err.message ? err.message : "Please try again",
           tone: "danger",
-          action: { label: "Retry", onClick: () => act(id, action, message) },
+          action: { label: "Retry", onClick: () => actOnExpense(id, action, message) },
         });
-        return;
+        return false;
       }
       updateExpense(data.expense);
       const label = action === "approve" ? "Approved" : action === "reject" ? "Rejected" : "Info requested";
@@ -135,21 +162,37 @@ export default function TriageApp() {
         tone: action === "approve" ? "success" : action === "reject" ? "danger" : "flag",
         action: { label: "Undo", onClick: () => revert(id) },
       });
+      return true;
     },
     [expenses, toast, revert]
   );
 
-  const resetDemo = useCallback(async () => {
-    setLoading(true);
-    await fetch("/api/reset", { method: "POST" });
-    setSelectedId(null);
-    setError(null);
-    setQuery("");
-    setActiveFilters(new Set());
-    setOnboardingClosed(false);
-    await refresh();
-    toast({ title: "Queue reset", description: "Back to a fresh set of submissions", tone: "default" });
-  }, [refresh, toast]);
+  const resetDemo = useCallback(
+    async function runReset() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/reset", { method: "POST" });
+        if (!res.ok) throw new Error();
+      } catch {
+        setLoading(false);
+        toast({
+          title: "Couldn't reset the queue",
+          description: "Please try again",
+          tone: "danger",
+          action: { label: "Retry", onClick: () => runReset() },
+        });
+        return;
+      }
+      setSelectedId(null);
+      setError(null);
+      setQuery("");
+      setActiveFilters(new Set());
+      setOnboardingClosed(false);
+      await refresh();
+      toast({ title: "Queue reset", description: "Back to a fresh set of submissions", tone: "default" });
+    },
+    [refresh, toast]
+  );
 
   // ---- filtering (search + flag chips) ----
   const filtered = useMemo(() => {
@@ -203,8 +246,10 @@ export default function TriageApp() {
 
   const approveAllClear = useCallback(async () => {
     setBulkApproving(true);
-    const ids = lanes.clear.map((e) => e.id);
-    for (const e of lanes.clear) await act(e.id, "approve");
+    const ids: string[] = [];
+    for (const e of lanes.clear) {
+      if (await act(e.id, "approve")) ids.push(e.id);
+    }
     setBulkApproving(false);
     // Replace the per-item toasts with one clear summary + undo-all.
     if (ids.length > 1) {
@@ -225,8 +270,13 @@ export default function TriageApp() {
   // ---- keyboard ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
+      if (confirmingReset) {
+        if (e.key === "Escape") setConfirmingReset(false);
+        return; // the confirm dialog owns the keyboard while open
+      }
       if (e.key === "?") {
         e.preventDefault();
         setShowShortcuts((s) => !s);
@@ -235,10 +285,6 @@ export default function TriageApp() {
       if (showShortcuts && e.key === "Escape") {
         setShowShortcuts(false);
         return;
-      }
-      if (confirmingReset) {
-        if (e.key === "Escape") setConfirmingReset(false);
-        return; // the confirm dialog owns the keyboard while open
       }
       if (selectedId) return; // panel owns its keys
       if (e.key === "j" || e.key === "ArrowDown") {
@@ -254,6 +300,9 @@ export default function TriageApp() {
           return visibleOrder[Math.max(0, i - 1)] ?? visibleOrder[0] ?? null;
         });
       } else if ((e.key === "Enter" || e.key === "o") && cursor) {
+        // If a row button itself is focused (e.g. after closing a case),
+        // let its native Enter activation open that row instead.
+        if (e.key === "Enter" && target?.closest?.("[data-row-id]")) return;
         e.preventDefault();
         setSelectedId(cursor);
       }
@@ -261,6 +310,24 @@ export default function TriageApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedId, cursor, visibleOrder, showShortcuts, confirmingReset]);
+
+  // When the case drawer closes, hand focus back to the row it came from
+  // (or the original trigger) so keyboard flow never drops to <body>.
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const drawerWasOpen = useRef(false);
+  useEffect(() => {
+    if (selectedId) {
+      drawerWasOpen.current = true;
+      return;
+    }
+    if (!drawerWasOpen.current) return;
+    drawerWasOpen.current = false;
+    const row = cursor
+      ? document.querySelector<HTMLElement>(`[data-row-id="${CSS.escape(cursor)}"]`)
+      : null;
+    (row ?? returnFocusRef.current)?.focus();
+    returnFocusRef.current = null;
+  }, [selectedId, cursor]);
 
   const selected = expenses.find((e) => e.id === selectedId) ?? null;
   const pendingCount = expenses.filter((e) => e.status === "pending").length;
@@ -277,6 +344,9 @@ export default function TriageApp() {
   const progress = running && metrics.total ? metrics.triagedCount / metrics.total : 0;
 
   const openAt = (id: string) => {
+    if (!selectedId && document.activeElement instanceof HTMLElement) {
+      returnFocusRef.current = document.activeElement;
+    }
     setSelectedId(id);
     setCursor(id);
   };
@@ -290,12 +360,23 @@ export default function TriageApp() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6">
           <div className="flex items-center gap-3">
             <LedgerMark />
-            <div className="flex items-baseline gap-2">
+            <h1 className="flex items-baseline gap-2">
               <span className="text-[15px] font-bold tracking-tight">FlowCo</span>
-              <span className="hidden h-3 w-px bg-line-strong sm:block" />
-              <span className="hidden text-[13px] text-ink-soft sm:block">Approvals Triage</span>
-            </div>
-            {mockMode && <span className="chip bg-danger-soft text-danger">mock — set ANTHROPIC_API_KEY</span>}
+              <span className="hidden h-3 w-px bg-line-strong sm:block" aria-hidden />
+              <span className="hidden text-[13px] font-normal text-ink-soft sm:block">Approvals Triage</span>
+            </h1>
+            {/* No room at phone widths — each case still carries its own MOCK chip.
+                (Wrapper span: .chip sets display and would override the hidden utility.) */}
+            {mockMode && (
+              <span className="hidden sm:block">
+                <span
+                  className="chip bg-danger-soft text-danger"
+                  title="Mock mode — set ANTHROPIC_API_KEY to run the real assistant"
+                >
+                  mock — set ANTHROPIC_API_KEY
+                </span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -336,7 +417,10 @@ export default function TriageApp() {
                   <span className="hidden sm:inline">Run assistant triage · {pendingCount}</span>
                 </>
               ) : (
-                "Queue triaged"
+                <>
+                  <span className="sm:hidden">Triaged</span>
+                  <span className="hidden sm:inline">Queue triaged</span>
+                </>
               )}
             </button>
           </div>
@@ -354,10 +438,19 @@ export default function TriageApp() {
 
       <main className="mx-auto max-w-6xl px-6 py-6">
         {error && (
-          <div className="mb-4 flex items-center justify-between rounded-md border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between rounded-md border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger"
+          >
             <span>{error}</span>
             <div className="flex items-center gap-3">
-              <button className="font-medium underline" onClick={refresh}>
+              <button
+                className="font-medium underline"
+                onClick={() => {
+                  setError(null);
+                  refresh();
+                }}
+              >
                 retry
               </button>
               <button className="underline" onClick={() => setError(null)}>
@@ -544,46 +637,69 @@ export default function TriageApp() {
           prevId={prevId}
           nextId={nextId}
           position={{ index: selIndex < 0 ? 0 : selIndex, total: visibleOrder.length }}
+          keysDisabled={showShortcuts}
         />
       )}
 
       {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
 
       {confirmingReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div
-            className="fade-in absolute inset-0 bg-ink/40 backdrop-blur-[1px]"
-            onClick={() => setConfirmingReset(false)}
-            aria-hidden
-          />
-          <div className="panel-in shadow-float relative w-full max-w-md rounded-2xl border border-line bg-surface p-6">
-            <h3 className="display text-lg font-semibold text-ink">Reset the demo to the start?</h3>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">
-              This returns the queue to its starting point — all{" "}
-              <span className="figure font-semibold text-ink">{expenses.length}</span>{" "}expenses go
-              back to freshly&#8209;submitted (un&#8209;triaged), and every approval, rejection, and info
-              request is cleared. It&rsquo;s the clean slate to run a demo from the beginning.
-            </p>
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmingReset(false)}
-                className="rounded-md border border-line-strong px-4 py-2 text-[13px] font-medium text-ink-soft transition hover:bg-paper"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setConfirmingReset(false);
-                  resetDemo();
-                }}
-                className="rounded-md bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110"
-              >
-                Reset to start
-              </button>
-            </div>
-          </div>
-        </div>
+        <ResetConfirmDialog
+          count={expenses.length}
+          onCancel={() => setConfirmingReset(false)}
+          onConfirm={() => {
+            setConfirmingReset(false);
+            resetDemo();
+          }}
+        />
       )}
+    </div>
+  );
+}
+
+function ResetConfirmDialog({
+  count,
+  onCancel,
+  onConfirm,
+}: {
+  count: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const trapRef = useFocusTrap<HTMLDivElement>();
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reset-dialog-title"
+    >
+      <div className="fade-in absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onCancel} aria-hidden />
+      <div ref={trapRef} className="panel-in shadow-float relative w-full max-w-md rounded-2xl border border-line bg-surface p-6">
+        <h3 id="reset-dialog-title" className="display text-lg font-semibold text-ink">
+          Reset the demo to the start?
+        </h3>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">
+          This returns the queue to its starting point — all{" "}
+          <span className="figure font-semibold text-ink">{count}</span>{" "}expenses go
+          back to freshly&#8209;submitted (un&#8209;triaged), and every approval, rejection, and info
+          request is cleared. It&rsquo;s the clean slate to run a demo from the beginning.
+        </p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-md border border-line-strong px-4 py-2 text-[13px] font-medium text-ink-soft transition hover:bg-paper"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-md bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110"
+          >
+            Reset to start
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -743,6 +859,7 @@ function Toolbar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by employee, merchant, or ID…"
+            aria-label="Search expenses by employee, merchant, or ID"
             className="w-full rounded-lg border border-line bg-surface py-2 pl-9 pr-3 text-sm placeholder:text-ink-faint focus:border-accent focus:outline-none"
           />
         </div>
@@ -759,6 +876,7 @@ function Toolbar({
                 key={f}
                 onClick={() => toggle(f)}
                 title={FLAG_EXPLAIN[f]}
+                aria-pressed={on}
                 className={`chip border transition ${
                   on
                     ? "border-flag bg-flag text-white"
@@ -872,6 +990,7 @@ function Row({
   return (
     <button
       ref={ref}
+      data-row-id={expense.id}
       onClick={() => onSelect(expense.id)}
       style={{ animationDelay: `${Math.min(index * 22, 200)}ms` }}
       className={`row-in grid w-full grid-cols-[3px_minmax(0,1fr)_auto] items-start gap-x-2.5 border-b border-line px-3 py-2.5 text-left transition last:border-b-0 hover:bg-paper ${
@@ -987,6 +1106,7 @@ function NoResults({ onClear }: { onClear: () => void }) {
 }
 
 function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
+  const trapRef = useFocusTrap<HTMLDivElement>();
   const rows: [string, string][] = [
     ["j / ↓", "Move down the queue"],
     ["k / ↑", "Move up the queue"],
@@ -998,11 +1118,18 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
     ["?", "Show this help"],
   ];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shortcuts-dialog-title"
+    >
       <div className="fade-in absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
-      <div className="panel-in shadow-float relative w-full max-w-sm rounded-2xl border border-line bg-surface p-5">
+      <div ref={trapRef} className="panel-in shadow-float relative w-full max-w-sm rounded-2xl border border-line bg-surface p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-ink-faint">Keyboard shortcuts</h3>
+          <h3 id="shortcuts-dialog-title" className="text-sm font-bold uppercase tracking-wider text-ink-faint">
+            Keyboard shortcuts
+          </h3>
           <button onClick={onClose} className="rounded p-1 text-ink-faint hover:text-ink" aria-label="Close">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M6 6l12 12M18 6L6 18" />

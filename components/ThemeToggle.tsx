@@ -1,8 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark" | "system";
+
+const KEY = "flowco-theme";
+const THEME_EVENT = "flowco-theme-change";
+
+function readTheme(): Theme {
+  try {
+    const saved = localStorage.getItem(KEY);
+    if (saved === "dark" || saved === "light" || saved === "system") return saved;
+  } catch {}
+  return "system";
+}
 
 function resolvedIsDark(t: Theme): boolean {
   if (t === "dark") return true;
@@ -10,37 +21,47 @@ function resolvedIsDark(t: Theme): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
+// The theme lives outside React (localStorage + the data-theme attribute set by
+// the no-flash script in layout.tsx), so it's read via useSyncExternalStore:
+// server snapshot renders the default, the client snapshot takes over on mount.
+function subscribe(onChange: () => void): () => void {
+  const mql = window.matchMedia("(prefers-color-scheme: dark)");
+  mql.addEventListener("change", onChange);
+  window.addEventListener(THEME_EVENT, onChange);
+  return () => {
+    mql.removeEventListener("change", onChange);
+    window.removeEventListener(THEME_EVENT, onChange);
+  };
+}
+
+function apply(t: Theme) {
+  const root = document.documentElement;
+  if (t === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", t);
+}
+
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
-  const [dark, setDark] = useState(false);
+  const dark = useSyncExternalStore(
+    subscribe,
+    () => resolvedIsDark(readTheme()),
+    () => false
+  );
 
-  useEffect(() => {
-    const saved = (localStorage.getItem("flowco-theme") as Theme) || "system";
-    setTheme(saved);
-    setDark(resolvedIsDark(saved));
-    apply(saved);
-  }, []);
-
-  const apply = (t: Theme) => {
-    const root = document.documentElement;
-    if (t === "system") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", t);
-  };
-
-  const toggle = () => {
-    const next: Theme = resolvedIsDark(theme) ? "light" : "dark";
-    setTheme(next);
-    setDark(next === "dark");
-    localStorage.setItem("flowco-theme", next);
+  const toggle = useCallback(() => {
+    const next: Theme = dark ? "light" : "dark";
+    try {
+      localStorage.setItem(KEY, next);
+    } catch {}
     apply(next);
-  };
+    window.dispatchEvent(new Event(THEME_EVENT));
+  }, [dark]);
 
   return (
     <button
       onClick={toggle}
       className="flex h-8 w-8 items-center justify-center rounded-md border border-line text-ink-soft transition hover:bg-paper"
-      aria-label="Toggle light/dark theme"
-      title="Toggle theme"
+      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      title={dark ? "Switch to light theme" : "Switch to dark theme"}
     >
       {dark ? (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

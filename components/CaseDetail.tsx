@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Policy, TriagedExpense } from "@/lib/types";
 import { CheckIcon, EngineChip, fmtDate, fmtDateTime, fmtMoney, StatusChip } from "./badges";
 import { useMoney } from "./DisplayCurrency";
+import { useFocusTrap } from "./useFocusTrap";
 
 const CHECK_LABELS: Record<string, string> = {
   policyCap: "Policy cap",
@@ -25,39 +26,49 @@ export default function CaseDetail({
   prevId,
   nextId,
   position,
+  keysDisabled = false,
 }: {
   expense: TriagedExpense;
   all: TriagedExpense[];
   policy: Policy;
   onClose: () => void;
-  onAction: (id: string, action: "approve" | "reject" | "request_info", message?: string) => Promise<void>;
-  onRevert: (id: string) => void;
+  onAction: (id: string, action: "approve" | "reject" | "request_info", message?: string) => Promise<boolean>;
+  onRevert: (id: string) => void | Promise<void>;
   onNavigate: (id: string) => void;
   prevId: string | null;
   nextId: string | null;
   position: { index: number; total: number };
+  keysDisabled?: boolean;
 }) {
   const v = expense.aiVerdict;
   const [message, setMessage] = useState(v?.draftEmployeeMessage ?? "");
   const [acting, setActing] = useState<string | null>(null);
+  const [reverting, setReverting] = useState(false);
+  const actingRef = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Trap Tab inside the drawer; suspended while the shortcuts overlay is stacked above.
+  const trapRef = useFocusTrap<HTMLElement>(!keysDisabled, "container");
 
   const actionable = expense.status === "triaged" || expense.status === "pending";
   const resolved =
     expense.status === "approved" || expense.status === "rejected" || expense.status === "info_requested";
 
-  const advance = () => {
-    if (nextId) onNavigate(nextId);
-    else onClose();
-  };
-
   const doAction = async (action: "approve" | "reject" | "request_info") => {
-    if (acting) return;
+    // Ref guard: state updates are async, so two rapid clicks (or a held
+    // keyboard shortcut) could both pass a state-only check.
+    if (actingRef.current) return;
+    actingRef.current = true;
     const target = nextId;
     setActing(action);
-    await onAction(expense.id, action, action === "request_info" ? message : undefined);
-    setActing(null);
+    let ok = false;
+    try {
+      ok = await onAction(expense.id, action, action === "request_info" ? message : undefined);
+    } finally {
+      actingRef.current = false;
+      setActing(null);
+    }
+    if (!ok) return; // the action toasted its own error — stay on this case
     if (target) onNavigate(target);
     else onClose();
   };
@@ -74,6 +85,7 @@ export default function CaseDetail({
   // keyboard: a/r act, ←/→ navigate, esc close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (keysDisabled) return; // a dialog stacked above owns the keyboard
       const tag = (e.target as HTMLElement)?.tagName;
       const typing = tag === "INPUT" || tag === "TEXTAREA";
       if (e.key === "Escape") {
@@ -99,7 +111,7 @@ export default function CaseDetail({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expense.id, nextId, prevId, actionable, message, acting]);
+  }, [expense.id, nextId, prevId, actionable, message, acting, keysDisabled]);
 
   const duplicates = (expense.checks?.duplicate.candidateIds ?? [])
     .map((id) => all.find((e) => e.id === id))
@@ -109,7 +121,6 @@ export default function CaseDetail({
   const nr = v?.nonReimbursable ?? null;
   const fx = v?.currencyReconciliation ?? null;
   const reimb = v?.reimbursableAmount ?? null;
-  const claimCcy = expense.currency;
   const rcCcy = nr?.currency ?? fx?.receiptCurrency ?? expense.receiptCurrency;
   // USD claim/reimburse figures follow the viewer's USD/INR toggle; receipt-
   // native amounts (rcCcy) always stay in the currency printed on the receipt.
@@ -126,14 +137,21 @@ export default function CaseDetail({
   return (
     <div className="fixed inset-0 z-40">
       <div className="fade-in absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
-      <aside className="panel-in absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col bg-surface shadow-2xl">
+      <aside
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Case ${expense.id} — ${expense.employee.name}`}
+        tabIndex={-1}
+        className="panel-in absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col bg-surface shadow-2xl"
+      >
         {resolved && <DecisionStamp status={expense.status as "approved" | "rejected" | "info_requested"} />}
 
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-6 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="figure text-sm text-ink-faint">{expense.id}</span>
-            <span className="truncate text-base font-semibold">{expense.employee.name}</span>
+            <h2 className="truncate text-base font-semibold">{expense.employee.name}</h2>
             <span className="hidden text-xs text-ink-faint sm:inline">{expense.employee.department}</span>
             <StatusChip status={expense.status} />
           </div>
@@ -481,6 +499,7 @@ export default function CaseDetail({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={3}
+                  aria-label="Message to the employee"
                   className="w-full rounded border border-line px-3 py-2 text-sm focus:border-accent focus:outline-none"
                   placeholder="Message to the employee…"
                 />
@@ -548,10 +567,19 @@ export default function CaseDetail({
               Decided this session · <span className="font-medium text-ink">{expense.status.replace("_", " ")}</span>
             </span>
             <button
-              onClick={() => onRevert(expense.id)}
-              className="rounded-md border border-line-strong px-3 py-1.5 text-sm font-medium text-ink-soft hover:bg-paper"
+              onClick={async () => {
+                if (reverting) return;
+                setReverting(true);
+                try {
+                  await onRevert(expense.id);
+                } finally {
+                  setReverting(false);
+                }
+              }}
+              disabled={reverting}
+              className="rounded-md border border-line-strong px-3 py-1.5 text-sm font-medium text-ink-soft transition hover:bg-paper disabled:opacity-50"
             >
-              Move back to review
+              {reverting ? "Moving…" : "Move back to review"}
             </button>
           </div>
         )}
