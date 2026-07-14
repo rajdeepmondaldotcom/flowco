@@ -1,17 +1,16 @@
 import { mkdir, writeFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
+import { costCenterFor } from "@/lib/costCenters";
 import { isSupabaseMode, nextSubmittedId, putExpense, supabase } from "@/lib/store";
 import type { Employee, TriagedExpense } from "@/lib/types";
 
-const COST_CENTERS: Record<string, string> = {
-  Sales: "CC-2100 Sales",
-  "Customer Success": "CC-2400 CS",
-  Engineering: "CC-3100 Engineering",
-  "Data Science": "CC-3200 Data Science",
-  Marketing: "CC-2600 Marketing",
-  Product: "CC-3300 Product",
-};
+// Storage upload of a receipt photo/PDF can take a while on a cold lambda.
+export const maxDuration = 60;
+
+// Currencies the product handles end-to-end — matches data/policy.json fxToUsd
+// and the extraction schema in lib/extract.ts.
+const RECEIPT_CURRENCIES = new Set(["USD", "INR", "SGD"]);
 
 // Uploaded receipts (photo or PDF): Supabase Storage in deployed mode (lambda
 // filesystems are ephemeral), local public/uploads in dev.
@@ -66,9 +65,31 @@ export async function POST(request: NextRequest) {
   const fileBase64 = body.fileBase64 ?? body.imageBase64;
   const fileMediaType = body.fileMediaType ?? body.imageMediaType;
 
+  if (!employee || !draft) {
+    return NextResponse.json(
+      { error: "An employee and an expense draft are required" },
+      { status: 400 }
+    );
+  }
   if (!draft.total || !draft.merchant) {
     return NextResponse.json(
       { error: "A merchant and a total are required before submitting" },
+      { status: 400 }
+    );
+  }
+  for (const field of ["amount", "tax", "tip", "total"] as const) {
+    const value = draft[field];
+    if (value != null && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+      return NextResponse.json(
+        { error: `Invalid ${field} — amounts must be non-negative numbers` },
+        { status: 400 }
+      );
+    }
+  }
+  const receiptCurrency = String(draft.receiptCurrency || "USD").trim().toUpperCase();
+  if (!RECEIPT_CURRENCIES.has(receiptCurrency)) {
+    return NextResponse.json(
+      { error: `Unsupported receipt currency "${draft.receiptCurrency}" — expected USD, INR, or SGD` },
       { status: 400 }
     );
   }
@@ -88,12 +109,12 @@ export async function POST(request: NextRequest) {
     merchant: draft.merchant,
     transactionDate: draft.transactionDate ?? new Date().toISOString().slice(0, 10),
     currency: "USD",
-    receiptCurrency: (draft.receiptCurrency || "USD").toUpperCase().slice(0, 3),
+    receiptCurrency,
     amount: draft.amount ?? draft.total,
     tax: draft.tax ?? 0,
     tip: draft.tip ?? 0,
     total: draft.total,
-    costCenter: COST_CENTERS[employee.department] ?? "CC-0000",
+    costCenter: costCenterFor(employee.department),
     receiptUrl,
     submittedAt: new Date().toISOString(),
     status: "pending",

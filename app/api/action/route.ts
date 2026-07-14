@@ -8,8 +8,21 @@ const ACTION_TO_STATUS: Record<string, ExpenseStatus> = {
   request_info: "info_requested",
 };
 
+const VALID_ACTIONS = new Set(["approve", "reject", "request_info", "revert"]);
+
 export async function POST(request: NextRequest) {
   const { id, action, message } = await request.json();
+  if (typeof id !== "string" || id === "") {
+    return NextResponse.json({ error: "An expense id is required" }, { status: 400 });
+  }
+  // Allowlist (not a bare object lookup) so inherited keys like "toString"
+  // can never sneak through as an action.
+  if (typeof action !== "string" || !VALID_ACTIONS.has(action)) {
+    return NextResponse.json(
+      { error: `Unknown action ${action} — expected approve, reject, request_info, or revert` },
+      { status: 400 }
+    );
+  }
   const expense = await getExpense(id);
   if (!expense) {
     return NextResponse.json({ error: `Unknown expense ${id}` }, { status: 404 });

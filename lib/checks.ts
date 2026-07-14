@@ -1,3 +1,4 @@
+import { DEPARTMENT_COST_CENTERS } from "./costCenters";
 import type { DeterministicChecks, Expense, Policy } from "./types";
 
 // Pure, deterministic checks. No LLM involvement — money math and duplicate
@@ -5,18 +6,6 @@ import type { DeterministicChecks, Expense, Policy } from "./types";
 // regardless of what the model concludes.
 
 const money = (n: number) => `$${n.toFixed(2)}`;
-
-// The GL cost center each department books to. A claim tagged to a different
-// department's cost center is a likely mis-pick from the "long dropdown" the
-// PDF describes — surface it for the approver.
-export const DEPARTMENT_COST_CENTERS: Record<string, string> = {
-  Sales: "CC-2100 Sales",
-  "Customer Success": "CC-2400 CS",
-  Product: "CC-3300 Product",
-  Engineering: "CC-3100 Engineering",
-  "Data Science": "CC-3200 Data Science",
-  Marketing: "CC-2600 Marketing",
-};
 
 export function runChecks(expense: Expense, all: Expense[], policy: Policy): DeterministicChecks {
   return {
