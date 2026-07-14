@@ -4,13 +4,15 @@
 // on an Expense is ALWAYS in USD. This module is client-safe (no server deps)
 // so the API, the triage engine, and the UI all use the same numbers.
 //
-// Rates are the reference rates in use for this cycle (mid-2026). Keep them in
-// sync with data/policy.json fxToUsd. Our use case is USD, INR, SGD.
+// Rates are the live mid-market reference rates as of 2026-07-14. Keep them in
+// sync with data/policy.json fxToUsd. Our use case is USD, INR, SGD. When these
+// change, update policy.json to match and reprice data/expenses.json (the seed
+// USD totals are derived from the receipts' native amounts at these rates).
 
 export const FX_TO_USD: Record<string, number> = {
   USD: 1,
-  INR: 0.0117, // 1 USD ≈ 85.5 INR
-  SGD: 0.781, // 1 USD ≈ 1.28 SGD
+  INR: 0.01045, // 1 USD ≈ 95.7 INR
+  SGD: 0.7728, // 1 USD ≈ 1.294 SGD
 };
 
 export const CURRENCY_SYMBOL: Record<string, string> = {
