@@ -105,7 +105,7 @@ Your job is NOT to approve or reject expenses. Your job is to do the investigati
 Rules:
 - Read the receipt image carefully. These are real photos — angled, shadowed, crumpled, sometimes in a foreign currency with local taxes (GST/VAT). Read line items, handwritten additions (tips, totals, signatures), and per-item vs total amounts. Report what is printed separately from what is handwritten.
 - Deterministic checks (policy caps, duplicate detection, amount limits, currency mismatch) are computed in code and given to you. Explain and contextualize them — do not recompute or contradict the arithmetic.
-- NON-REIMBURSABLE ITEMS (alcohol AND personal items): This is your most important job — code cannot read the receipt, so only you can catch these. Alcohol (beer, wine, cocktails, spirits, a bar/liquor line) is never reimbursable. So are clearly personal, non-business items on an otherwise-business receipt — an in-room movie, minibar snacks, a spa charge, laundry, a personal item mixed into a store receipt. Identify each such line, add any tax attributable to it, put them in "nonReimbursable", and compute the reimbursable remainder in "reimbursableAmount". Never clear an expense whose receipt contains a non-reimbursable line — route it to a human with the exact amount to deduct.
+- NON-REIMBURSABLE ITEMS (alcohol AND personal items): This is your most important job — code cannot read the receipt, so only you can catch these. Alcohol (beer, wine, cocktails, spirits, a bar/liquor line) is never reimbursable. So are clearly personal, non-business items on an otherwise-business receipt — an in-room movie, minibar snacks, a spa charge, laundry, a personal item mixed into a store receipt. The same applies when the ENTIRE purchase is personal (a personal-interest book, a gift, a game): a personal purchase does not become reimbursable by being small, so flag it and route it to a human. Identify each such line, add any tax attributable to it, put them in "nonReimbursable", and compute the reimbursable remainder in "reimbursableAmount". Never clear an expense whose receipt contains a non-reimbursable line — route it to a human with the exact amount to deduct.
 - CATEGORY: Check that the filed category fits the merchant and receipt. Watch for a meal filed as "travel" or "other", or anything mis-filed in a way that dodges a lower category cap. If it looks wrong, fill in "categoryCheck" with the suggested category and the cap it would breach if re-filed correctly.
 - DATE: If the receipt's date clearly doesn't match the claimed transaction date, note it in "dateNote" (leave it an empty string when the dates agree). A date discrepancy always goes to a human to confirm.
 - TIP / SERVICE CHARGE: If a gratuity or service charge is ALREADY included on the receipt (e.g. "Service Charge 18%", "Gratuity included") and an ADDITIONAL tip was written on top, flag the double gratuity — note both amounts and recommend the approver confirm the added tip is intended before it's reimbursed. Do not silently clear a bill that was tipped twice.
@@ -227,6 +227,16 @@ function applyGuardrail(checks: DeterministicChecks, model: ModelVerdict): "clea
     model.receiptMatch.status === "mismatch" ||
     model.receiptMatch.status === "uncertain" ||
     model.receiptMatch.status === "not_a_receipt"
+  )
+    return "needs_human";
+  // The model reads the numbers; code owns the tolerance. A same-currency claim
+  // above what the receipt supports — even by fifty cents — is the exact
+  // gray-zone over-claim triage exists to catch (the EXP-1008 probe). The model
+  // does not get to round it away, call it a "match", and clear it.
+  if (
+    model.receiptMatch.extractedTotal !== null &&
+    !model.currencyReconciliation &&
+    model.receiptMatch.claimedTotal - model.receiptMatch.extractedTotal > 0.01
   )
     return "needs_human";
   // If the model found money that must be deducted (alcohol, other

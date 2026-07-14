@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flowco-triage",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "flowco-memory",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:memory"
+      ],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

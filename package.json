@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:memory": "SUPABASE_URL= SUPABASE_SERVICE_ROLE_KEY= node node_modules/next/dist/bin/next dev"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
