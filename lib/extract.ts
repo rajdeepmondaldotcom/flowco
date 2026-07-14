@@ -72,6 +72,7 @@ Rules:
 - Prefer the receipt for hard numbers; prefer the description for purpose and context. Note conflicts in sourceNotes instead of silently picking one.
 - Never invent amounts, dates, or merchants. If it isn't in the description or on the receipt, leave it null and list it in "missing".
 - If only a grand total is legible, put it in nativeTotal and leave the parts null.
+- HANDWRITTEN BILLS: A fully handwritten bill on a printed letterhead (shop name, GSTIN, "prices inclusive of taxes") is a real receipt — isReceipt=true. Take the merchant from the printed letterhead; read the handwritten date and total carefully. A hand-circled figure near "Total" is usually the amount actually paid — trust the circled figure for nativeTotal. Handwritten digits are easy to confuse (1 vs 7, 4 vs 9): if a digit is genuinely ambiguous or the line items don't clearly sum to the stated total, say so in sourceNotes and surface it in "missing" or followUpQuestion instead of presenting a clean itemized read.
 - Resolve relative dates against today's date provided in the prompt.
 - IS IT A RECEIPT? Set isReceipt=false if the attached file is not an actual receipt or invoice (a poster, a menu, a screenshot, a book, a random photo) or if it is watermarked as a SAMPLE / TEST / "not valid for expense claims". In that case add it to "missing" and ask for a valid receipt.
 - Keep purpose short and businesslike. It will be read by an approver.`;
