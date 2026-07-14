@@ -94,7 +94,7 @@ data/policy.json           │
 
 ### Deliberately not built
 
-Auth, real email/Slack sends, payroll integration, editable policy, mobile. The clean domestic receipts are synthetic (generated with Playwright — `scripts/generate-receipts.mjs`), including the deliberately tricky handwritten-tip case and a same-day identical-fare Uber pair. The hard cases use **real** receipt photos.
+Auth, real email/Slack sends, payroll integration, editable policy, and a mobile-optimized approver *queue table* (the approver works at a desk — but the employee `/submit` flow is deliberately phone-first, and the case-review panel is fully mobile-readable, because those are where "from my phone" actually matters). The clean domestic receipts are synthetic (generated with Playwright — `scripts/generate-receipts.mjs`), including the deliberately tricky handwritten-tip case and a same-day identical-fare Uber pair. The hard cases use **real** receipt photos.
 
 ### Design — "The Reconciliation Desk"
 
