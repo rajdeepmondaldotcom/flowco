@@ -113,6 +113,8 @@ export default function CaseDetail({
   const sameCurrencyDelta =
     v && !fx && v.receiptMatch.extractedTotal !== null ? expense.total - v.receiptMatch.extractedTotal : null;
   const reduced = reimb && Math.abs(reimb.value - expense.total) > 0.005;
+  const isPdf = /\.pdf($|\?)/i.test(expense.receiptUrl ?? "");
+  const catWrong = Boolean(v?.categoryLooksWrong);
 
   const navBtn =
     "flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-soft transition hover:bg-paper disabled:opacity-30";
@@ -243,16 +245,36 @@ export default function CaseDetail({
 
           <div className="mb-5 grid gap-4 md:grid-cols-2">
             <div>
-              <SectionTitle>Receipt</SectionTitle>
+              <SectionTitle>Receipt {isPdf && <span className="chip ml-1 bg-accent-soft text-accent">PDF</span>}</SectionTitle>
               {expense.receiptUrl ? (
-                <a href={expense.receiptUrl} target="_blank" rel="noreferrer" title="Open full size">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={expense.receiptUrl}
-                    alt={`Receipt for ${expense.id}`}
-                    className="max-h-115 w-full rounded-md border border-line object-contain bg-paper"
-                  />
-                </a>
+                isPdf ? (
+                  <a
+                    href={expense.receiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex flex-col items-center justify-center gap-3 rounded-md border border-line bg-paper px-6 py-10 text-center transition hover:border-accent"
+                  >
+                    <span className="flex h-14 w-11 items-center justify-center rounded-md border-2 border-danger/40 bg-surface">
+                      <span className="mono text-[10px] font-bold text-danger">PDF</span>
+                    </span>
+                    <div>
+                      <div className="text-sm font-medium text-ink">{expense.merchant} invoice.pdf</div>
+                      <div className="mt-0.5 text-xs text-ink-faint">
+                        PDF receipt — the assistant read it directly. Click to open.
+                      </div>
+                    </div>
+                    <span className="chip bg-accent-soft text-accent">Open receipt →</span>
+                  </a>
+                ) : (
+                  <a href={expense.receiptUrl} target="_blank" rel="noreferrer" title="Open full size">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={expense.receiptUrl}
+                      alt={`Receipt for ${expense.id}`}
+                      className="max-h-115 w-full rounded-md border border-line object-contain bg-paper"
+                    />
+                  </a>
+                )
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-md border border-dashed border-line-strong text-sm text-ink-faint">
                   No receipt attached
@@ -352,6 +374,27 @@ export default function CaseDetail({
                   {fx.plausible ? "plausible — needs a human sanity-check" : "rate looks off"}
                 </div>
                 <p className="px-3 py-2 text-xs text-ink-soft">{fx.note}</p>
+              </div>
+            </>
+          )}
+
+          {catWrong && (
+            <>
+              <SectionTitle>Category · looks mis-filed</SectionTitle>
+              <div className="mb-5 rounded-md border border-flag/25 bg-flag-soft/40 px-4 py-3 text-sm">
+                <span>
+                  Filed as <span className="font-semibold">{expense.category}</span>.
+                </span>
+                {v?.categoryNote && <p className="mt-1 text-xs text-ink-soft">{v.categoryNote}</p>}
+              </div>
+            </>
+          )}
+
+          {v?.dateNote && (
+            <>
+              <SectionTitle>Date</SectionTitle>
+              <div className="mb-5 rounded-md border border-flag/25 bg-flag-soft/40 px-4 py-3 text-sm text-ink-soft">
+                {v.dateNote}
               </div>
             </>
           )}

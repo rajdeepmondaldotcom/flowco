@@ -32,11 +32,16 @@ The PDF's manual workflow lists exactly what makes an approver stop and dig. Eac
 | Wrong cost center / GL code | `costCenter` (dept→GL map) | EXP-1017 Marketing expense coded to Engineering |
 | Over $1,000 → always manager review | `amountLimit` | EXP-1019 $1,180 international flight |
 | Over $500 → beyond one-click | `amountLimit` | EXP-1020 $680 conference pass |
-| Possible duplicate → check past submissions | `duplicate` | EXP-1010/1011 Uber round-trip; EXP-1014/1015 split bill |
+| Possible duplicate → check past submissions | `duplicate` | EXP-1010/1011 Uber round-trip (legit); EXP-1014/1015 split bill (legit); **EXP-1021/1022 Notion — a true double-submission the model recommends rejecting** |
 | Policy exception (discretion) | `policyCap` + model | EXP-1013 alcohol dinner; EXP-1009 client dinner |
 | Ambiguous receipt | model (vision) | EXP-1008; the real Goa receipts |
 | Foreign currency | `currency` + model FX | EXP-1012 EUR; EXP-1013–1016 INR |
+| **Wrong category (to dodge a cap)** | model | EXP-1023 — a $185 steakhouse dinner filed as "travel" (cap $500) instead of "meals" (cap $100) |
+| **Personal item on a receipt** | model (vision) | EXP-1024 — a hotel folio with a $18.99 in-room movie the model deducts (reimburse $195.01) |
+| **Receipt is a PDF, not a photo** | model (document) | EXP-1025 — a real Canva `.pdf` invoice the model reads and clears |
 | Under $500 & everything matches → one-click | all checks pass | EXP-1001–1007 auto-clear lane |
+
+Three of these — mis-categorization, a personal line item, and a **true** double-submission (vs. a legitimate split or round trip) — are things a rules engine cannot judge; the model reads the receipt and reasons about intent. And the PDF invoice case exercises the exact words "Photo or **PDF** upload" from the employee form: images go to the model as image blocks, PDFs as native document blocks.
 
 The employee side (`/submit`) collapses the seven-screen form into one sentence + a photo: the same engine reads it, fills every field including **currency**, shows the extracted draft back to confirm (the PDF's "OCR'd amount shown back"), auto-picks the cost center, and drops it into the approver's queue.
 

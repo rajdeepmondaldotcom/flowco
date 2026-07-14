@@ -135,6 +135,9 @@ export interface TriageVerdict {
   };
   nonReimbursable: NonReimbursable | null;
   currencyReconciliation: CurrencyReconciliation | null;
+  categoryLooksWrong: boolean; // filed category doesn't fit the merchant/receipt
+  categoryNote: string; // if wrong: what it should be + the cap it would breach; else ""
+  dateNote: string; // if the receipt date != claimed date, explain; else ""
   reimbursableAmount: {
     value: number;
     currency: string;

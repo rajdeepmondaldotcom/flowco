@@ -18,7 +18,9 @@ export const fmtDateTime = (iso: string) =>
 
 // Plain-English tooltip for each flag — recognition over recall.
 export const FLAG_EXPLAIN: Record<string, string> = {
-  "alcohol / non-reimbursable": "The receipt lists alcohol, which policy says isn't reimbursable — the assistant deducted it.",
+  alcohol: "The receipt lists alcohol, which policy says isn't reimbursable — the assistant deducted it.",
+  "personal item": "The receipt includes a personal, non-business line the assistant deducted.",
+  "wrong category": "The filed category doesn't fit the merchant — possibly to stay under a lower cap.",
   "over cap": "The amount exceeds this category's policy cap.",
   "over $1,000": "Anything over $1,000 always needs manager review.",
   "possible duplicate": "Same employee and merchant nearby in time — could be a re-submission or a split bill.",
@@ -29,13 +31,18 @@ export const FLAG_EXPLAIN: Record<string, string> = {
   "low confidence": "The assistant wasn't confident enough to clear this on its own.",
 };
 
+const ALCOHOL_RE = /alcohol|wine|beer|cocktail|spirit|liquor|\bbar\b|mudslide|vodka|whisk|\brum\b|\bgin\b|tequila/i;
+
 // Which flag types apply to a triaged expense — drives the badges in the review lane.
 export function flagsFor(e: TriagedExpense): string[] {
   const flags: string[] = [];
   if (!e.checks || !e.aiVerdict) return flags;
   const v = e.aiVerdict;
-  if (v.engine !== "mock" && v.nonReimbursable && v.nonReimbursable.subtotalExcluded > 0.005)
-    flags.push("alcohol / non-reimbursable");
+  if (v.engine !== "mock" && v.nonReimbursable && v.nonReimbursable.subtotalExcluded > 0.005) {
+    const txt = v.nonReimbursable.items.map((i) => i.description).join(" ") + " " + v.nonReimbursable.note;
+    flags.push(ALCOHOL_RE.test(txt) ? "alcohol" : "personal item");
+  }
+  if (v.engine !== "mock" && v.categoryLooksWrong) flags.push("wrong category");
   if (e.checks.policyCap.status === "fail") flags.push("over cap");
   if (e.checks.amountLimit.status === "fail") flags.push("over $1,000");
   if (e.checks.duplicate.status === "warn") flags.push("possible duplicate");

@@ -73,6 +73,15 @@ const VerdictSchema = z.object({
     })
     .nullable()
     .describe("The amount you believe should actually be reimbursed, if it differs from the claimed total; else null."),
+  categoryLooksWrong: z
+    .boolean()
+    .describe("True if the filed category doesn't fit the merchant/receipt (e.g. a restaurant meal filed as 'travel' to stay under a cap)."),
+  categoryNote: z
+    .string()
+    .describe("If categoryLooksWrong: the category it should be and the cap it would breach. Otherwise an empty string."),
+  dateNote: z
+    .string()
+    .describe("If the receipt's date doesn't match the claimed date, explain briefly. Otherwise an empty string."),
   summary: z.string().describe("1-2 sentence case summary for the queue view"),
   unresolved: z
     .array(z.string())
@@ -96,13 +105,15 @@ Your job is NOT to approve or reject expenses. Your job is to do the investigati
 Rules:
 - Read the receipt image carefully. These are real photos — angled, shadowed, crumpled, sometimes in a foreign currency with local taxes (GST/VAT). Read line items, handwritten additions (tips, totals, signatures), and per-item vs total amounts. Report what is printed separately from what is handwritten.
 - Deterministic checks (policy caps, duplicate detection, amount limits, currency mismatch) are computed in code and given to you. Explain and contextualize them — do not recompute or contradict the arithmetic.
-- ALCOHOL AND OTHER NON-REIMBURSABLE ITEMS: This is your most important job — code cannot read the receipt, so only you can catch these. If the receipt lists alcohol (beer, wine, cocktails, spirits, a bar/liquor line), it is NOT reimbursable per FlowCo policy. Identify each such line, add any tax attributable to it, put them in "nonReimbursable", and compute the reimbursable remainder in "reimbursableAmount". Never clear an expense whose receipt contains alcohol — route it to a human with the exact amount to deduct.
+- NON-REIMBURSABLE ITEMS (alcohol AND personal items): This is your most important job — code cannot read the receipt, so only you can catch these. Alcohol (beer, wine, cocktails, spirits, a bar/liquor line) is never reimbursable. So are clearly personal, non-business items on an otherwise-business receipt — an in-room movie, minibar snacks, a spa charge, laundry, a personal item mixed into a store receipt. Identify each such line, add any tax attributable to it, put them in "nonReimbursable", and compute the reimbursable remainder in "reimbursableAmount". Never clear an expense whose receipt contains a non-reimbursable line — route it to a human with the exact amount to deduct.
+- CATEGORY: Check that the filed category fits the merchant and receipt. Watch for a meal filed as "travel" or "other", or anything mis-filed in a way that dodges a lower category cap. If it looks wrong, fill in "categoryCheck" with the suggested category and the cap it would breach if re-filed correctly.
+- DATE: If the receipt's date clearly doesn't match the claimed transaction date, note it in "dateNote".
 - FOREIGN CURRENCY: When the receipt is in a different currency than the claim (claims are in USD), fill in "currencyReconciliation" — the receipt total in its own currency, the implied FX rate, and whether that rate is plausible for the date. You cannot verify the exact rate used, so say so and route to a human.
 - Be explicit about what you could NOT resolve. Never paper over ambiguity — an honest "I can't verify X" is the most valuable thing you produce.
 - Policy exceptions are the approver's call, not yours. FlowCo policy allows entertainment above the meals cap at the approver's discretion with a documented business purpose — when you see that pattern, lay out the evidence (per-person math if a group meal) and route to the human.
 - COST CENTER / GL CODE: The deterministic checks tell you whether the claim is coded to the employee's own department cost center. If it's flagged as a possible mis-tag, note the expected vs. actual cost center and draft a one-line confirmation — this is the "wrong cost center" case from the manual workflow. Don't guess the correct code; ask.
 - AMOUNT THRESHOLDS: Anything over $1,000 always requires manager review regardless of how clean it looks — say so plainly. Between the $500 one-click limit and $1,000, note that it's over the one-click threshold and needs a glance.
-- Duplicate candidates always go to the human. Compare the records and say what distinguishes them — a re-submission of the same bill vs. a legitimate split of one large group bill (different items, consecutive bill numbers, same table/time) vs. two genuinely separate purchases. Give the approver the distinguishing evidence.
+- Duplicate candidates always go to the human. Compare the records and characterize which kind it is: (a) a genuine DOUBLE-SUBMISSION — the same bill submitted twice (identical or near-identical amount, and especially the SAME bill/invoice number and line items) → recommend approving one and REJECTING the duplicate; (b) a legitimate SPLIT of one large group bill (different items, consecutive bill numbers, same table/time) → approve both; (c) two genuinely separate purchases (e.g., a round trip — opposite routes) → approve both. Give the approver the distinguishing evidence so the call takes seconds.
 - When information is missing or ambiguous, draft a short, friendly, specific message to the employee asking for exactly what is needed — so the approver can send it in one click.
 - Keep the summary tight: it is a queue row, not a report. If money must be deducted (alcohol, FX), lead the summary with the reimbursable amount.`;
 
@@ -110,7 +121,7 @@ function buildUserContent(
   expense: TriagedExpense,
   checks: DeterministicChecks,
   duplicates: TriagedExpense[],
-  image: ReceiptImage | null
+  source: ReceiptSource | null
 ): Anthropic.MessageParam["content"] {
   const policy = getPolicy();
   const content: Exclude<Anthropic.MessageParam["content"], string> = [];
@@ -174,12 +185,20 @@ function buildUserContent(
     });
   }
 
-  if (image) {
-    content.push({ type: "text", text: `## Receipt image (attached below)` });
-    content.push({
-      type: "image",
-      source: { type: "base64", media_type: image.mediaType, data: image.data },
-    });
+  if (source) {
+    if (source.kind === "pdf") {
+      content.push({ type: "text", text: `## Receipt (PDF attached below)` });
+      content.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: source.data },
+      });
+    } else {
+      content.push({ type: "text", text: `## Receipt image (attached below)` });
+      content.push({
+        type: "image",
+        source: { type: "base64", media_type: source.mediaType, data: source.data },
+      });
+    }
   } else {
     content.push({ type: "text", text: `## Receipt\nNo receipt was attached to this expense.` });
   }
@@ -206,25 +225,36 @@ function applyGuardrail(checks: DeterministicChecks, model: ModelVerdict): "clea
   if (model.nonReimbursable && model.nonReimbursable.subtotalExcluded > 0.005) return "needs_human";
   // Foreign-currency claims can't be auto-cleared — the FX rate isn't verifiable in code.
   if (model.currencyReconciliation) return "needs_human";
+  // A suspected mis-categorization (often to dodge a cap) needs a human.
+  if (model.categoryLooksWrong) return "needs_human";
   return "clear";
 }
 
 // ---- Engines ----
 
-type ReceiptImage = { data: string; mediaType: "image/png" | "image/jpeg" };
+// Receipts can be a photo OR a PDF (the PDF explicitly allows "Photo or PDF
+// upload"). Images go to the vision model as image blocks; PDFs go as native
+// document blocks — the model reads both.
+type ReceiptSource =
+  | { kind: "image"; data: string; mediaType: "image/png" | "image/jpeg" }
+  | { kind: "pdf"; data: string };
 
 // Seeded receipts are local files under public/; uploaded receipts live in
 // Supabase Storage behind an https URL. Handle both.
-async function loadReceiptImage(receiptUrl: string | null): Promise<ReceiptImage | null> {
+async function loadReceiptSource(receiptUrl: string | null): Promise<ReceiptSource | null> {
   if (!receiptUrl) return null;
+  const isPdf = /\.pdf($|\?)/i.test(receiptUrl);
   const mediaType = /\.jpe?g($|\?)/i.test(receiptUrl) ? "image/jpeg" : "image/png";
+  let data: string;
   if (/^https?:\/\//.test(receiptUrl)) {
     const res = await fetch(receiptUrl);
     if (!res.ok) throw new Error(`Could not fetch receipt (${res.status}) from ${receiptUrl}`);
-    return { data: Buffer.from(await res.arrayBuffer()).toString("base64"), mediaType };
+    data = Buffer.from(await res.arrayBuffer()).toString("base64");
+  } else {
+    const buf = await readFile(path.join(process.cwd(), "public", receiptUrl));
+    data = buf.toString("base64");
   }
-  const buf = await readFile(path.join(process.cwd(), "public", receiptUrl));
-  return { data: buf.toString("base64"), mediaType };
+  return isPdf ? { kind: "pdf", data } : { kind: "image", data, mediaType };
 }
 
 async function claudeVerdict(
@@ -236,17 +266,17 @@ async function claudeVerdict(
 
   // A receipt that fails to load must never crash triage. Fall back to
   // metadata-only and tell the model so it routes to a human safely.
-  let image: ReceiptImage | null = null;
+  let source: ReceiptSource | null = null;
   let receiptLoadError = false;
   if (expense.receiptUrl) {
     try {
-      image = await loadReceiptImage(expense.receiptUrl);
+      source = await loadReceiptSource(expense.receiptUrl);
     } catch {
       receiptLoadError = true;
     }
   }
 
-  const content = buildUserContent(expense, checks, duplicates, image);
+  const content = buildUserContent(expense, checks, duplicates, source);
   if (receiptLoadError && Array.isArray(content)) {
     content.push({
       type: "text",
@@ -295,6 +325,9 @@ function mockVerdict(expense: TriagedExpense, checks: DeterministicChecks): Tria
     nonReimbursable: null,
     currencyReconciliation: null,
     reimbursableAmount: null,
+    categoryLooksWrong: false,
+    categoryNote: "",
+    dateNote: "",
     summary: needsHuman
       ? `Flagged by deterministic checks: ${problems.join("; ")}`
       : `All deterministic checks pass. ${expense.merchant}, $${expense.total.toFixed(2)}, ${expense.category}.`,
