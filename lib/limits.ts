@@ -7,6 +7,7 @@ import { isSupabaseMode, supabase } from "./store";
 const HOURLY_CAPS = {
   triage: 150, // ~12 full queue runs
   extract: 40,
+  chat: 120, // conversational intake turns (cheap Sonnet calls, several per submission)
 } as const;
 
 export async function allowModelCall(kind: keyof typeof HOURLY_CAPS): Promise<boolean> {

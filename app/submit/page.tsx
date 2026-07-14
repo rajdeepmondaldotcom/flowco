@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { fmtMoney } from "@/components/badges";
 import { fmt } from "@/lib/currency";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/components/Toast";
 import type { Employee } from "@/lib/types";
 import type { ExpenseDraft } from "@/lib/extract";
+import ChatMode, { type SubmitFile } from "./ChatMode";
 
 const EXAMPLES = [
   "Team lunch on Swiggy after standup, about ₹1,900, receipt attached",
@@ -27,16 +28,14 @@ const EMPLOYEES: Employee[] = [
 ];
 
 type Phase = "compose" | "extracting" | "review" | "submitting" | "done";
+type Mode = "chat" | "form";
 
 export default function SubmitPage() {
   const [employee, setEmployee] = useState(EMPLOYEES[0]);
+  const [mode, setMode] = useState<Mode>("form");
+  const [chatKey, setChatKey] = useState(0);
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<{
-    base64: string;
-    mediaType: "image/png" | "image/jpeg" | "application/pdf";
-    preview: string | null;
-    name: string;
-  } | null>(null);
+  const [file, setFile] = useState<SubmitFile | null>(null);
   const [draft, setDraft] = useState<ExpenseDraft | null>(null);
   const [phase, setPhase] = useState<Phase>("compose");
   const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -52,6 +51,7 @@ export default function SubmitPage() {
     setSubmittedId(null);
     setError(null);
     setPhase("compose");
+    setChatKey((k) => k + 1); // fresh conversation next time
   };
 
   const onFile = (picked: File | undefined) => {
@@ -149,13 +149,43 @@ export default function SubmitPage() {
       <main className="mx-auto max-w-xl px-6 py-8">
         <Stepper current={stepNo} />
 
+        {stepNo === 1 && (
+          <ModeToggle
+            mode={mode}
+            onMode={(m) => {
+              setMode(m);
+              setError(null); // don't carry one mode's error banner into the other
+            }}
+            disabled={phase === "extracting"}
+          />
+        )}
+
         {error && (
           <div className="mb-4 rounded-lg border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
             {error}
           </div>
         )}
 
-        {(phase === "compose" || phase === "extracting") && (
+        {/* Chat stays mounted across phases so "Edit" returns to the same
+            conversation; a new key after submit starts a fresh one. */}
+        <div className={mode === "chat" && phase === "compose" ? "" : "hidden"}>
+          <ChatMode
+            key={chatKey}
+            employees={EMPLOYEES}
+            employee={employee}
+            onEmployee={setEmployee}
+            file={file}
+            onFile={onFile}
+            onClearFile={() => setFile(null)}
+            onDraft={(d) => {
+              setDraft(d);
+              setError(null);
+              setPhase("review");
+            }}
+          />
+        </div>
+
+        {mode === "form" && (phase === "compose" || phase === "extracting") && (
           <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <label className="mb-1 block text-xs font-medium text-ink-faint">You are</label>
             <select
@@ -334,6 +364,58 @@ export default function SubmitPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+// Chat ↔ Quick form. Styled like the console's CurrencyToggle segmented control.
+function ModeToggle({ mode, onMode, disabled }: { mode: Mode; onMode: (m: Mode) => void; disabled?: boolean }) {
+  const options: { value: Mode; label: string; icon: ReactNode }[] = [
+    {
+      value: "chat",
+      label: "Chat",
+      icon: (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path
+            d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      value: "form",
+      label: "Quick form",
+      icon: (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
+        </svg>
+      ),
+    },
+  ];
+  return (
+    <div className="mb-4 flex justify-center">
+      <div
+        role="group"
+        aria-label="How to submit"
+        className="flex items-center overflow-hidden rounded-md border border-line-strong bg-surface text-[12px] font-semibold shadow-sm"
+      >
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onMode(o.value)}
+            aria-pressed={mode === o.value}
+            disabled={disabled}
+            className={`flex items-center gap-1.5 px-3 py-1.5 transition disabled:opacity-50 ${
+              mode === o.value ? "bg-accent text-white" : "text-ink-soft hover:bg-paper"
+            }`}
+          >
+            {o.icon}
+            {o.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
