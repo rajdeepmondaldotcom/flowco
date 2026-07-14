@@ -16,7 +16,7 @@ const ctx = await browser.newContext({ viewport: { width: 1120, height: 1000 }, 
 await ctx.addInitScript(() => {
   try {
     localStorage.setItem("flowco-theme", "light");
-  } catch (e) {}
+  } catch {}
 });
 const page = await ctx.newPage();
 await page.goto(`${BASE}/submit`, { waitUntil: "networkidle" });

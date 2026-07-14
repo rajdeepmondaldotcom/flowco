@@ -30,7 +30,7 @@ async function newCtx(browser, theme, height = 1000) {
   await ctx.addInitScript((t) => {
     try {
       localStorage.setItem("flowco-theme", t);
-    } catch (e) {}
+    } catch {}
   }, theme);
   return ctx;
 }
@@ -40,7 +40,7 @@ async function dismissOnboarding(page) {
   const x = page.locator('button[aria-label="Dismiss"], button:has-text("×")').first();
   try {
     if (await x.isVisible({ timeout: 500 })) await x.click();
-  } catch (e) {}
+  } catch {}
 }
 
 const browser = await chromium.launch();
@@ -70,7 +70,7 @@ for (const theme of ["light", "dark"]) {
   try {
     await h.scrollIntoViewIfNeeded();
     await page.waitForTimeout(500);
-  } catch (e) {}
+  } catch {}
   await page.screenshot({ path: path.join(outDir, `queue-review-lane.png`) });
   console.log("wrote queue-review-lane.png");
   await ctx.close();
