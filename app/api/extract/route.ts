@@ -6,7 +6,8 @@ import { isMockMode } from "@/lib/triage";
 export const maxDuration = 120;
 
 const MAX_DESCRIPTION_CHARS = 2000;
-const MAX_IMAGE_BASE64_CHARS = 7_000_000; // ~5MB image
+const MAX_FILE_BASE64_CHARS = 14_000_000; // ~10MB (photo or PDF)
+const ALLOWED_MEDIA = ["image/png", "image/jpeg", "application/pdf"] as const;
 
 export async function POST(request: NextRequest) {
   if (isMockMode()) {
@@ -15,21 +16,28 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const { description, imageBase64, imageMediaType } = await request.json();
+  const body = await request.json();
+  const description = body.description;
+  // Accept the new fileBase64/fileMediaType, and the legacy imageBase64/imageMediaType.
+  const fileBase64 = body.fileBase64 ?? body.imageBase64 ?? null;
+  const fileMediaType = body.fileMediaType ?? body.imageMediaType ?? null;
   if (!description || typeof description !== "string") {
     return NextResponse.json({ error: "Describe the expense first" }, { status: 400 });
   }
   if (description.length > MAX_DESCRIPTION_CHARS) {
     return NextResponse.json({ error: "That description is a bit long — keep it under 2,000 characters" }, { status: 400 });
   }
-  if (imageBase64 && imageBase64.length > MAX_IMAGE_BASE64_CHARS) {
-    return NextResponse.json({ error: "Receipt photo is too large — keep it under ~5MB" }, { status: 400 });
+  if (fileBase64 && fileMediaType && !ALLOWED_MEDIA.includes(fileMediaType)) {
+    return NextResponse.json({ error: "Attach a photo (PNG/JPG) or a PDF receipt" }, { status: 400 });
+  }
+  if (fileBase64 && fileBase64.length > MAX_FILE_BASE64_CHARS) {
+    return NextResponse.json({ error: "Receipt file is too large — keep it under ~10MB" }, { status: 400 });
   }
   if (!(await allowModelCall("extract"))) {
     return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
   try {
-    const draft = await extractDraft(description, imageBase64 ?? null, imageMediaType ?? null);
+    const draft = await extractDraft(description, fileBase64, fileMediaType);
     return NextResponse.json({ draft });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

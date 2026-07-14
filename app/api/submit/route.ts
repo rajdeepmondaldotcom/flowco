@@ -8,26 +8,27 @@ const COST_CENTERS: Record<string, string> = {
   Sales: "CC-2100 Sales",
   "Customer Success": "CC-2400 CS",
   Engineering: "CC-3100 Engineering",
+  "Data Science": "CC-3200 Data Science",
   Marketing: "CC-2600 Marketing",
   Product: "CC-3300 Product",
 };
 
-// Uploaded receipts: Supabase Storage in deployed mode (lambda filesystems are
-// ephemeral), local public/uploads in dev.
+// Uploaded receipts (photo or PDF): Supabase Storage in deployed mode (lambda
+// filesystems are ephemeral), local public/uploads in dev.
 async function storeReceipt(
   id: string,
-  imageBase64: string,
-  imageMediaType: string | undefined
+  fileBase64: string,
+  fileMediaType: string | undefined
 ): Promise<string> {
-  const ext = imageMediaType === "image/jpeg" ? "jpg" : "png";
+  const ext = fileMediaType === "application/pdf" ? "pdf" : fileMediaType === "image/jpeg" ? "jpg" : "png";
   const name = `${id.toLowerCase()}.${ext}`;
-  const buffer = Buffer.from(imageBase64, "base64");
+  const buffer = Buffer.from(fileBase64, "base64");
 
   if (isSupabaseMode()) {
     const { error } = await supabase()
       .storage.from("receipts")
       .upload(`uploads/${name}`, buffer, {
-        contentType: imageMediaType ?? "image/png",
+        contentType: fileMediaType ?? "image/png",
         upsert: true,
       });
     if (error) throw new Error(`Receipt upload failed: ${error.message}`);
@@ -42,7 +43,7 @@ async function storeReceipt(
 }
 
 export async function POST(request: NextRequest) {
-  const { employee, draft, imageBase64, imageMediaType } = (await request.json()) as {
+  const body = (await request.json()) as {
     employee: Employee;
     draft: {
       merchant: string | null;
@@ -56,9 +57,14 @@ export async function POST(request: NextRequest) {
       purpose: string | null;
       project: string | null;
     };
+    fileBase64?: string;
+    fileMediaType?: string;
     imageBase64?: string;
     imageMediaType?: string;
   };
+  const { employee, draft } = body;
+  const fileBase64 = body.fileBase64 ?? body.imageBase64;
+  const fileMediaType = body.fileMediaType ?? body.imageMediaType;
 
   if (!draft.total || !draft.merchant) {
     return NextResponse.json(
@@ -69,8 +75,8 @@ export async function POST(request: NextRequest) {
 
   const id = await nextSubmittedId();
   let receiptUrl: string | null = null;
-  if (imageBase64) {
-    receiptUrl = await storeReceipt(id, imageBase64, imageMediaType);
+  if (fileBase64) {
+    receiptUrl = await storeReceipt(id, fileBase64, fileMediaType);
   }
 
   const expense: TriagedExpense = {

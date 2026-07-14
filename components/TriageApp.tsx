@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Policy, TriagedExpense } from "@/lib/types";
-import { FLAG_EXPLAIN, flagsFor, foreignAmount, fmtDate, fmtMoney, StatusChip } from "./badges";
+import { FLAG_EXPLAIN, flagsFor, nativeReceiptAmount, fmtDate, fmtMoney, StatusChip } from "./badges";
+import CurrencyToggle from "./CurrencyToggle";
+import { useDisplayCurrency, useMoney } from "./DisplayCurrency";
 import CaseDetail from "./CaseDetail";
 import ThemeToggle from "./ThemeToggle";
 import { useToast } from "./Toast";
@@ -285,7 +287,7 @@ export default function TriageApp() {
   return (
     <div className="desk-canvas flex-1">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6">
           <div className="flex items-center gap-3">
             <LedgerMark />
             <div className="flex items-baseline gap-2">
@@ -304,6 +306,7 @@ export default function TriageApp() {
             >
               <span className="mono text-xs">?</span>
             </button>
+            <CurrencyToggle />
             <ThemeToggle />
             <a
               href="/submit"
@@ -314,21 +317,27 @@ export default function TriageApp() {
             <button
               onClick={() => setConfirmingReset(true)}
               title="Reset the demo to its starting state — all expenses back to un-triaged"
-              className="rounded-md border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink-soft transition hover:bg-paper"
+              className="shrink-0 rounded-md border border-line-strong px-2.5 py-1.5 text-[13px] font-medium text-ink-soft transition hover:bg-paper sm:px-3"
             >
-              Reset demo
+              <span className="sm:hidden">Reset</span>
+              <span className="hidden sm:inline">Reset demo</span>
             </button>
             <button
               onClick={runTriage}
               disabled={running || pendingCount === 0}
-              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-40"
+              className="inline-flex shrink-0 items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-40 sm:px-4"
             >
               {running && <Spinner />}
-              {running
-                ? `Triaging ${metrics.triagedCount}/${metrics.total}`
-                : pendingCount > 0
-                  ? `Run assistant triage · ${pendingCount}`
-                  : "Queue triaged"}
+              {running ? (
+                `Triaging ${metrics.triagedCount}/${metrics.total}`
+              ) : pendingCount > 0 ? (
+                <>
+                  <span className="sm:hidden">Triage · {pendingCount}</span>
+                  <span className="hidden sm:inline">Run assistant triage · {pendingCount}</span>
+                </>
+              ) : (
+                "Queue triaged"
+              )}
             </button>
           </div>
         </div>
@@ -601,6 +610,7 @@ function Spinner() {
 
 function CountUp({ value }: { value: number }) {
   const [display, setDisplay] = useState(value);
+  const money = useMoney();
   const fromRef = useRef(value);
   useEffect(() => {
     const from = fromRef.current;
@@ -619,7 +629,7 @@ function CountUp({ value }: { value: number }) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [value]);
-  return <>{fmtMoney(display, "USD")}</>;
+  return <>{money(display)}</>;
 }
 
 function Onboarding({
@@ -829,9 +839,7 @@ function Lane({
         </div>
         {action}
       </div>
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
-        <div className="min-w-[760px]">{children}</div>
-      </div>
+      <div className="rounded-xl border border-line bg-surface shadow-sm">{children}</div>
     </section>
   );
 }
@@ -853,6 +861,8 @@ function Row({
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const active = cursor === expense.id;
+  const money = useMoney();
+  const { ccy } = useDisplayCurrency();
   useEffect(() => {
     if (active) ref.current?.scrollIntoView({ block: "nearest" });
   }, [active]);
@@ -864,35 +874,44 @@ function Row({
       ref={ref}
       onClick={() => onSelect(expense.id)}
       style={{ animationDelay: `${Math.min(index * 22, 200)}ms` }}
-      className={`row-in flex w-full items-center gap-3 border-b border-line px-3 py-2.5 text-left transition last:border-b-0 hover:bg-paper ${
+      className={`row-in grid w-full grid-cols-[3px_minmax(0,1fr)_auto] items-start gap-x-2.5 border-b border-line px-3 py-2.5 text-left transition last:border-b-0 hover:bg-paper ${
         active ? "bg-paper ring-1 ring-inset ring-accent/40" : ""
       } ${busy ? "reconciling" : ""}`}
     >
-      <span className={`lane-rail ${railColor}`} />
-      <span className="figure w-[74px] shrink-0 text-xs text-ink-faint">{expense.id}</span>
-      <span className="w-32 shrink-0 truncate text-sm font-medium">{expense.employee.name}</span>
-      <span className="hidden w-36 shrink-0 truncate text-sm text-ink-soft md:block">{expense.merchant}</span>
-      <span className="chip shrink-0 bg-neutral-chip text-ink-soft">{expense.category}</span>
-      <span className="min-w-0 flex-1 truncate text-xs text-ink-faint">
-        {busy ? "assistant is investigating…" : expense.aiVerdict?.summary ?? expense.purpose}
-      </span>
-      <span className="hidden shrink-0 gap-1 lg:flex">
-        {flags.slice(0, 2).map((f) => (
-          <span key={f} className="chip bg-flag-soft text-flag" title={FLAG_EXPLAIN[f]}>
-            {f}
-          </span>
-        ))}
-      </span>
-      <span className="figure w-12 shrink-0 text-right text-xs text-ink-faint">{fmtDate(expense.transactionDate)}</span>
-      <span className="figure flex w-24 shrink-0 flex-col items-end justify-center leading-tight">
-        <span className="text-sm font-semibold">{fmtMoney(expense.total, expense.currency)}</span>
-        {foreignAmount(expense) && (
-          <span className="text-[10px] font-normal text-ink-faint">{foreignAmount(expense)}</span>
+      <span className={`h-full self-stretch rounded-full ${railColor}`} />
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="figure shrink-0 text-[11px] text-ink-faint">{expense.id}</span>
+          <span className="truncate text-sm font-medium">{expense.employee.name}</span>
+          <span className="chip shrink-0 bg-neutral-chip text-ink-soft">{expense.category}</span>
+          <span className="hidden min-w-0 truncate text-sm text-ink-soft sm:inline">· {expense.merchant}</span>
+        </div>
+        <div className="mt-0.5 min-w-0 truncate text-xs text-ink-faint">
+          <span className="text-ink-soft sm:hidden">{expense.merchant} · </span>
+          {busy ? "assistant is investigating…" : expense.aiVerdict?.summary ?? expense.purpose}
+        </div>
+        {flags.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {flags.slice(0, 3).map((f) => (
+              <span key={f} className="chip bg-flag-soft text-flag" title={FLAG_EXPLAIN[f]}>
+                {f}
+              </span>
+            ))}
+          </div>
         )}
-      </span>
-      <span className="w-24 shrink-0 text-right">
+      </div>
+      <div className="flex w-[76px] shrink-0 flex-col items-end gap-0.5 pl-1">
+        <span className="figure whitespace-nowrap text-sm font-semibold">{money(expense.total)}</span>
+        {expense.receiptCurrency !== ccy && (
+          <span className="figure whitespace-nowrap text-[10px] font-normal text-ink-faint">
+            {nativeReceiptAmount(expense)}
+          </span>
+        )}
         <StatusChip status={expense.status} />
-      </span>
+        <span className="figure whitespace-nowrap text-[10px] text-ink-faint">
+          {fmtDate(expense.transactionDate)}
+        </span>
+      </div>
     </button>
   );
 }
@@ -924,6 +943,7 @@ function InboxZero({
   recovered: number;
   onReset: () => void;
 }) {
+  const money = useMoney();
   return (
     <div className="fade-in flex flex-col items-center rounded-xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-clear-soft text-clear">
@@ -939,7 +959,7 @@ function InboxZero({
           <>
             {" "}
             and the assistant flagged{" "}
-            <span className="figure font-semibold text-accent">{fmtMoney(recovered, "USD")}</span> of
+            <span className="figure font-semibold text-accent">{money(recovered)}</span> of
             non-reimbursable spend
           </>
         )}

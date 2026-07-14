@@ -118,13 +118,13 @@ const R = {
   "exp-1009": indianResto({ name: "Farzi Cafe", loc: "UB City, Vittal Mallya Rd, Bengaluru", gstin: "29AAECF5521P1ZQ", date: "06/07/2026", time: "9:15 PM", table: "12", bill: "FZ-55231", items: [["Dal Chawal Arancini x2", "1,180"], ["Butter Chicken Bao x2", "1,760"], ["Galauti Kebab", "1,290"], ["Naan Basket x2", "980"], ["Fresh Lime Soda x4", "760"], ["Mango Kulfi x4", "1,200"]], sub: "16,020", cgst: "400.5", sgst: "400.5", service: "879", total: "17,700", card: "AMEX **** 1005 — APPROVED", footer: "4 guests — client closing dinner" }),
   "exp-1010": cab({ brand: "Ola", sub: "Prime Sedan  •  Bengaluru", date: "09/07/2026 7:05 AM", driver: "Trip 8841", from: "Indiranagar (office)", to: "Kempegowda Intl Airport (T2)", fare: [["Base + distance", "₹3,790"], ["Airport toll", "₹185"], ["GST 5%", "₹100"]], total: "₹4,075" }),
   "exp-1011": cab({ brand: "Ola", sub: "Prime Sedan  •  Bengaluru", date: "09/07/2026 2:20 PM", driver: "Trip 8862", from: "Kempegowda Intl Airport (T2)", to: "Indiranagar (office)", fare: [["Base + distance", "₹3,790"], ["Airport toll", "₹185"], ["GST 5%", "₹100"]], total: "₹4,075", rot: -0.6 }),
-  "exp-1012": `<div class="card"><div class="head" style="background:#1c1c1c"><div style="font-size:17px;font-weight:700">Hotel Adlon Kempinski</div><div style="opacity:.8;font-size:12px">Berlin</div></div><div class="body">
+  "exp-1012": `<div class="card"><div class="head" style="background:#1c2b2a"><div style="font-size:17px;font-weight:700">The Oberoi, Bengaluru</div><div style="opacity:.85;font-size:12px">Guest Folio 5521</div></div><div class="body">
     <div class="row"><span class="muted">Guest</span><span>Ananya Iyer</span></div>
     <div class="row"><span class="muted">Stay</span><span>3 Jul – 4 Jul 2026 (1 night)</span></div>
-    <div class="row rule"><span>Deluxe Room</span><span>€172.00</span></div>
-    <div class="row"><span>MwSt (VAT) 19%</span><span>€33.00</span></div>
-    <div class="row rule tot"><span>Gesamt / Total</span><span>€205.00 EUR</span></div>
-    <div class="row"><span class="muted">Mastercard •••• 4409</span><span class="muted">Betrag in EUR</span></div></div></div>`,
+    <div class="row rule"><span>Premier Room — 03/07</span><span>₹16,786</span></div>
+    <div class="row"><span>GST 12%</span><span>₹2,014</span></div>
+    <div class="row rule tot"><span>Balance (INR)</span><span>₹18,800</span></div>
+    <div class="row"><span class="muted">HDFC •••• 4409</span><span class="muted">GSTIN 29AABCO...</span></div></div></div>`,
   "exp-1019": `<div class="card"><div class="head" style="background:#c8102e"><div style="font-size:18px;font-weight:700">Air India</div><div style="opacity:.85;font-size:12px">Tax Invoice</div></div><div class="body">
     <div class="row"><span class="muted">Passenger</span><span>REDDY / KAVYA</span></div>
     <div class="row"><span class="muted">Sector</span><span>BLR ⇄ SFO (round trip)</span></div>
@@ -154,13 +154,13 @@ const R = {
   "exp-1026": cab({ brand: "Namma Yatri", sub: "Auto  •  Bengaluru", date: "07/07/2026 23:41", driver: "Auto 4471", from: "Indiranagar", to: "Kempegowda Airport", fare: [["Fare", "₹2,4?0"], ["Night 1.5x", "₹3??"], ["Toll", "₹1??"]], total: "₹2,8?5", faded: true, rot: -2.4 }),
   "exp-1027": indianResto({ name: "Barbeque Nation", loc: "Indiranagar, Bengaluru", gstin: "29AADCB2291M1ZR", date: "08/07/2026", time: "8:14 PM", table: "12", bill: "BN-1 OF 2", items: [["Buffet Non-Veg x2", "2,598"], ["Starters add-on", "1,200"], ["Soft drinks x2", "400"]], sub: "4,198", cgst: "105", sgst: "105", service: "379", total: "7,830", card: "AMEX **** 2214 — SPLIT CHECK", footer: "Table 12 — check 1 of 2" }),
   "exp-1028": indianResto({ name: "Barbeque Nation", loc: "Indiranagar, Bengaluru", gstin: "29AADCB2291M1ZR", date: "08/07/2026", time: "8:19 PM", table: "12", bill: "BN-2 OF 2", items: [["Buffet Non-Veg x2", "2,598"], ["Kulfi x2", "398"], ["Soft drinks x2", "400"]], sub: "4,096", cgst: "102", sgst: "102", service: "360", total: "7,660", card: "AMEX **** 2214 — SPLIT CHECK", footer: "Table 12 — check 2 of 2", rot: -1.1 }),
-  "exp-1029": `<div class="card"><div class="head" style="background:#14243b"><div style="font-size:17px;font-weight:700">The Hoxton, Holborn</div><div style="opacity:.85;font-size:12px">London • Booking HOX-88431</div></div><div class="body">
+  "exp-1029": `<div class="card"><div class="head" style="background:#14243b"><div style="font-size:17px;font-weight:700">Hotel G Singapore</div><div style="opacity:.85;font-size:12px">Booking HG-88431</div></div><div class="body">
     <div class="row"><span class="muted">Guest</span><span>Arjun Nair</span></div>
     <div class="row"><span class="muted">Stay</span><span>9 Jul – 10 Jul 2026 (1 night)</span></div>
-    <div class="row rule"><span>Roomy Room — 1 night</span><span>£116.67</span></div>
-    <div class="row"><span>VAT 20%</span><span>£23.33</span></div>
-    <div class="row rule tot"><span>Total charged</span><span>£140.00 GBP</span></div>
-    <div class="row"><span class="muted">Visa •••• 5190</span><span class="muted">Amount in GBP</span></div></div></div>`,
+    <div class="row rule"><span>Good Room — 1 night</span><span>S$206.42</span></div>
+    <div class="row"><span>GST 9%</span><span>S$18.58</span></div>
+    <div class="row rule tot"><span>Total charged</span><span>S$225.00 SGD</span></div>
+    <div class="row"><span class="muted">Visa •••• 5190</span><span class="muted">Amount in SGD</span></div></div></div>`,
   "exp-1030": indianResto({ name: "Truffles Cafe", loc: "St Marks Rd, Bengaluru", gstin: "29AAECT7789J1ZX", date: "02/07/2026", time: "12:38 PM", table: "7", bill: "TRF-40118", items: [["All-American Burger x2", "1,780"], ["Virgin Mojito x2", "700"], ["Loaded Nachos", "580"], ["Masala Chai x2", "240"], ["Brownie Sundae x2", "760"]], sub: "4,060", cgst: "101.5", sgst: "101.5", service: "406", total: "5,670", card: "VISA **** 4417 — APPROVED 02/07/2026", footer: "Client lunch" }),
   "exp-1031": indianResto({ name: "The Fatty Bao", loc: "Indiranagar, Bengaluru", gstin: "29AAECF3312H1ZK", date: "05/07/2026", time: "7:52 PM", table: "party of 4", bill: "FB-77120", items: [["Bao Basket x3", "2,010"], ["Ramen x2", "1,180"], ["Asian Greens", "540"], ["Non-alc Sake Cooler x2", "760"]], sub: "4,490", cgst: "112", sgst: "112", service: "808", tip: "986", total: "6,700", card: "MC **** 3301 — APPROVED", footer: "8% service charge already included", extraSub: `<div class="row meta"><span>(service charge 18% included above)</span><span></span></div>` }),
   "exp-1038": `<div class="thermal" style="--rot:0.5deg"><div class="c"><h1>Newton Food Centre</h1><div class="sub">Stall 31, Newton Circus, Singapore<br>30/06/2026  8:10 PM</div></div>

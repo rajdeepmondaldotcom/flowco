@@ -13,14 +13,10 @@
   "duplicateWindowDays": 3,
   "fxToUsd": {
     "USD": 1,
-    "INR": 0.012,
-    "SGD": 0.741,
-    "GBP": 1.27,
-    "EUR": 1.08,
-    "AED": 0.272,
-    "JPY": 0.0064
+    "INR": 0.0117,
+    "SGD": 0.781
   },
-  "fxNote": "Reference rates to convert a foreign receipt to USD, the claim currency. FlowCo reimburses in USD; employees pay in local currency and the assistant converts automatically at these reference rates, then flags any claim that does not match the converted receipt.",
+  "fxNote": "Reference rates to convert a foreign receipt to USD, the claim currency, in use for this cycle (1 USD is about 85.5 INR and about 1.28 SGD). FlowCo reimburses in USD; the team pays in local currency (INR, some SGD) and the assistant converts automatically at these rates, then flags any claim that does not match the converted receipt.",
   "smallForeignAutoClearUsd": 40,
   "reimbursement": {
     "alcohol": "not_reimbursable",

@@ -1,13 +1,13 @@
 // Capture the employee conversational-submit flow for the showcase PDF:
-// describe → review (extracted draft shown back) → submitted.
-// Creates one throwaway expense; reset the demo afterward. Run after the app is up.
-// Run: BASE=http://localhost:61574 node scripts/capture-submit.mjs
+// describe (INR sentence) -> review (native ₹ -> converted USD shown back) -> submitted.
+// Creates one throwaway expense; reset the demo afterward.
+// Run: BASE=http://localhost:PORT node scripts/capture-submit.mjs
 import { chromium } from "playwright";
 import { mkdirSync } from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 
-const BASE = process.env.BASE || "http://localhost:61574";
+const BASE = process.env.BASE || "http://localhost:3000";
 const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "docs", "showcase-assets");
 mkdirSync(outDir, { recursive: true });
 
@@ -22,8 +22,8 @@ const page = await ctx.newPage();
 await page.goto(`${BASE}/submit`, { waitUntil: "networkidle" });
 await page.waitForTimeout(900);
 
-const sentence =
-  "Client dinner with two Acme folks at Nopa last night, about $180 total, on my card — renewal talks";
+// An INR sentence, so the review shows the rupee amount converting to USD.
+const sentence = "Team dinner on Swiggy with the eng team last night, about ₹6,400 total, receipt attached";
 const box = page.locator("textarea").first();
 await box.click();
 await box.fill(sentence);
@@ -31,18 +31,17 @@ await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(outDir, "submit-describe.png") });
 console.log("wrote submit-describe.png");
 
-// Submit for extraction
+// Submit for extraction, then wait for the REVIEW card (the compose card is gone).
 await page.locator('button:has-text("Let the assistant fill it in")').first().click();
-// Wait for the review step
-await page.waitForSelector('text=/CHECK WHAT THE ASSISTANT|Review|Looks right/i', { timeout: 60000 });
-await page.waitForTimeout(1200);
+await page.waitForSelector("text=/Check what the assistant filled in/i", { timeout: 90000 });
+await page.waitForSelector('button:has-text("Looks right")', { timeout: 90000 });
+await page.waitForTimeout(1000);
 await page.screenshot({ path: path.join(outDir, "submit-review.png") });
 console.log("wrote submit-review.png");
 
-// Confirm → submitted success
 try {
   await page.locator('button:has-text("Looks right")').first().click();
-  await page.waitForSelector('text=/Sent to approvals|no seven screens/i', { timeout: 30000 });
+  await page.waitForSelector("text=/Sent to approvals|no seven screens/i", { timeout: 30000 });
   await page.waitForTimeout(700);
   await page.screenshot({ path: path.join(outDir, "submit-success.png") });
   console.log("wrote submit-success.png");

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Policy, TriagedExpense } from "@/lib/types";
 import { CheckIcon, EngineChip, fmtDate, fmtDateTime, fmtMoney, StatusChip } from "./badges";
+import { useMoney } from "./DisplayCurrency";
 
 const CHECK_LABELS: Record<string, string> = {
   policyCap: "Policy cap",
@@ -110,6 +111,9 @@ export default function CaseDetail({
   const reimb = v?.reimbursableAmount ?? null;
   const claimCcy = expense.currency;
   const rcCcy = nr?.currency ?? fx?.receiptCurrency ?? expense.receiptCurrency;
+  // USD claim/reimburse figures follow the viewer's USD/INR toggle; receipt-
+  // native amounts (rcCcy) always stay in the currency printed on the receipt.
+  const money = useMoney();
   const sameCurrencyDelta =
     v && !fx && v.receiptMatch.extractedTotal !== null ? expense.total - v.receiptMatch.extractedTotal : null;
   const reduced = reimb && Math.abs(reimb.value - expense.total) > 0.005;
@@ -201,11 +205,11 @@ export default function CaseDetail({
                 Reconciliation
               </div>
               <div className="px-4 py-3">
-                <LedgerRow label="Claimed" value={fmtMoney(expense.total, claimCcy)} />
+                <LedgerRow label="Claimed" value={money(expense.total)} />
                 {nr && nr.subtotalExcluded > 0.005 && (
                   <LedgerRow
                     label={`Less non-reimbursable (${fmtMoney(nr.subtotalExcluded, rcCcy)})`}
-                    value={`− ${fmtMoney(expense.total - reimb!.value, claimCcy)}`}
+                    value={`− ${money(expense.total - reimb!.value)}`}
                     strike
                   />
                 )}
@@ -213,7 +217,7 @@ export default function CaseDetail({
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm font-semibold">Reimburse</span>
                   <span className="figure display text-[26px] font-bold text-clear">
-                    {fmtMoney(reimb!.value, reimb!.currency)}
+                    {money(reimb!.value)}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">{reimb!.note}</p>
@@ -236,10 +240,10 @@ export default function CaseDetail({
               <div className="text-sm">{expense.purpose}</div>
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-1 border-t border-line bg-paper px-4 py-2.5 text-sm">
-              <Field label="Amount" value={fmtMoney(expense.amount, claimCcy)} mono />
-              <Field label="Tax" value={fmtMoney(expense.tax, claimCcy)} mono />
-              <Field label="Tip" value={fmtMoney(expense.tip, claimCcy)} mono />
-              <Field label="Claimed total" value={fmtMoney(expense.total, claimCcy)} mono strong />
+              <Field label="Amount" value={money(expense.amount)} mono />
+              <Field label="Tax" value={money(expense.tax)} mono />
+              <Field label="Tip" value={money(expense.tip)} mono />
+              <Field label="Claimed total" value={money(expense.total)} mono strong />
             </div>
           </div>
 
@@ -297,7 +301,7 @@ export default function CaseDetail({
                         <ReconRow label="Handwritten addition" value={fmtMoney(extraction.handwrittenAdjustment, rcCcy)} />
                       )}
                       {sameCurrencyDelta !== null && Math.abs(sameCurrencyDelta) > 0.005 && (
-                        <ReconRow label="Delta vs claim" value={fmtMoney(sameCurrencyDelta, claimCcy)} alert />
+                        <ReconRow label="Delta vs claim" value={money(sameCurrencyDelta)} alert />
                       )}
                     </>
                   ) : (
@@ -437,7 +441,7 @@ export default function CaseDetail({
                         </td>
                         <td className="px-3 py-2">{d.purpose}</td>
                         <td className="figure px-3 py-2 text-xs">{fmtDate(d.transactionDate)}</td>
-                        <td className="figure px-3 py-2 text-right">{fmtMoney(d.total, d.currency)}</td>
+                        <td className="figure px-3 py-2 text-right">{money(d.total)}</td>
                         <td className="px-3 py-2">
                           <StatusChip status={d.status} />
                         </td>
@@ -517,7 +521,7 @@ export default function CaseDetail({
               disabled={acting !== null}
               className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-lg bg-clear px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
             >
-              {acting === "approve" ? "Approving…" : reduced ? `Approve ${fmtMoney(reimb!.value, reimb!.currency)}` : "Approve"}
+              {acting === "approve" ? "Approving…" : reduced ? `Approve ${money(reimb!.value)}` : "Approve"}
               <kbd className="mono hidden rounded bg-white/20 px-1 text-[10px] sm:inline">a</kbd>
             </button>
             <button

@@ -170,7 +170,7 @@
     <div class="stat"><div class="v num">38</div><div class="k">Expenses submitted</div></div>
     <div class="stat"><div class="v green num">11</div><div class="k">Auto-cleared</div></div>
     <div class="stat"><div class="v amber num">27</div><div class="k">Sent to a person</div></div>
-    <div class="stat"><div class="v teal num">$90</div><div class="k">Non-reimbursable caught</div></div>
+    <div class="stat"><div class="v teal num">$92</div><div class="k">Non-reimbursable caught</div></div>
   </div>
   <p class="note">Every number is produced live by <span class="mono">claude-opus-4-8</span> reading real receipt photos and PDFs, not hard-coded. This is an India-based team. People pay in rupees, sometimes Singapore dollars or pounds, and get reimbursed in US dollars. The assistant converts every receipt automatically. The rest of this document walks each capability with a screenshot from that run.</p>
 
@@ -267,7 +267,7 @@
   <p style="margin-top:3mm">One click on Run assistant triage. Code checks run first. Then the model reads every receipt and converts every foreign amount. Thirty-eight submissions settle into two lanes. The clean ones ready to clear together, the rest arriving with the work done.</p>
   <figure style="margin-top:3mm">
     <div class="shot"><img src="showcase-assets/queue-hero-light.png" alt="Triage queue" /></div>
-    <figcaption><b>The queue after one run.</b> The clean lane holds small local spend and the US software the team runs on. Each foreign amount shows the original next to the converted dollars, so a Swiggy lunch reads <b>₹1,950</b> and <b>$23.40</b> at once. The headline number is money the assistant caught that policy says not to pay. The filter chips count every reason a case stopped.</figcaption>
+    <figcaption><b>The queue after one run.</b> The clean lane holds small local spend and the US software the team runs on. Each foreign amount shows the original next to the converted dollars, so a Swiggy lunch reads <b>₹1,950</b> and <b>$22.82</b> at once. The headline number is money the assistant caught that policy says not to pay. The filter chips count every reason a case stopped.</figcaption>
   </figure>
   <div class="two" style="margin-top:5mm">
     <div>
@@ -296,9 +296,9 @@
       <p style="font-size:9.4pt">The receipt has one alcohol line, a Goan Mudslide. Nothing in the structured claim says the word alcohol. Only reading the receipt finds it. The assistant does four things code cannot.</p>
       <ul class="ticks" style="margin-top:1mm">
         <li>Finds the ₹935 cocktail and its own 22% VAT of ₹205.70.</li>
-        <li>Converts the ₹16,823 total to $201.50 at the reference rate.</li>
+        <li>Converts the ₹16,823 total to $196.83 at the reference rate.</li>
         <li>Reads the word "Duplicate" on the bill and calls it a reprint, not a second claim.</li>
-        <li>Hands the approver the exact number to pay, <strong>$187.84</strong>.</li>
+        <li>Hands the approver the exact number to pay, <strong>$183.48</strong>.</li>
       </ul>
       <p style="font-size:9.4pt; margin-top:2mm">Then it stops. The dinner is still over the $100 meals cap. That is a policy exception, and that is the approver's call, with the offsite purpose laid out. The model prepared the decision. It did not make it.</p>
       <div style="margin-top:3mm"><span class="pill flag">policy exception</span> <span class="pill flag">ambiguous receipt</span> <span class="pill flag">foreign currency</span></div>
@@ -317,7 +317,7 @@
       <div class="shot crop" style="height:92mm"><img src="showcase-assets/case-personal-item.png" alt="Personal item"/></div>
       <div class="tags">EXP-1024 · non-reimbursable</div>
       <h3>A personal item on a hotel folio</h3>
-      <p>An ITC Gardenia folio for ₹17,833 hides a ₹1,583 in-room movie. The model deducts it and its tax, converts the rest, and lands the reimbursable at <b>$195</b>. The approver reads one ledger.</p>
+      <p>An ITC Gardenia folio for ₹17,833 hides a ₹1,583 in-room movie. The model deducts it and its tax, converts the rest, and lands the reimbursable at <b>$190</b>. The approver reads one ledger.</p>
     </figure>
     <figure class="card">
       <div class="shot crop" style="height:92mm"><img src="showcase-assets/case-illegible.png" alt="Illegible receipt"/></div>
@@ -338,24 +338,24 @@
 <section class="page">
   <div class="kicker"><span class="n">07</span><span class="t">Capabilities. Automatic currency conversion.</span></div>
   <h2>The team pays in rupees. FlowCo pays in dollars. The assistant does the math.</h2>
-  <p style="margin-top:2mm; font-size:9.6pt">Twenty-five of the thirty-eight receipts are in a currency that is not the dollar. Rupees, one in Singapore dollars, one in pounds, one in euros. The assistant converts each one at a reference rate on file, shows the original next to the converted amount, and hands a person the dollar figure to confirm. A small local expense clears on its own. A large one goes to a human to confirm the rate before pay.</p>
+  <p style="margin-top:2mm; font-size:9.6pt">Twenty-eight of the thirty-eight receipts are in rupees, and two more in Singapore dollars. The reimbursement currency is the dollar. The assistant converts every receipt at this cycle's reference rate (1 USD is about 85.5 INR and 1.28 SGD), stores the claim in USD, and shows the original amount next to the converted dollars. A small local expense clears on its own. A larger one goes to a person to confirm the rate before pay. The conversion is not cosmetic: it runs in code, so a rupee receipt can never land in the queue as if it were dollars, and a viewer can flip the whole console between <em>USD and INR</em> with one toggle.</p>
   <div class="two" style="margin-top:3mm; gap:8mm">
     <figure>
       <div class="shot crop" style="height:104mm"><img src="showcase-assets/case-currency.png" alt="Currency conversion"/></div>
-      <figcaption><b>The conversion, shown plainly.</b> Receipt in rupees, the reference rate, the converted dollars, and a note that a person confirms the rate before pay. The same block handles Singapore dollars and pounds.</figcaption>
+      <figcaption><b>The conversion, shown plainly.</b> Receipt in rupees, the reference rate, the converted dollars, and a note that a person confirms the rate before pay. The same block handles Singapore dollars the same way.</figcaption>
     </figure>
     <div>
       <h3>Where the conversion earns its place</h3>
       <p style="font-size:9.4pt">Two cases prove it does real work, not decoration.</p>
       <ul class="ticks" style="margin-top:1mm">
-        <li><b>A London hotel.</b> £140 on the receipt, claimed as $235. That implies a rate of 1.68, well above the real 1.27. The model calls the claim overstated by about $57 and asks a person to check it.</li>
-        <li><b>A Singapore flight.</b> A MakeMyTrip fare of ₹24,571 converts to about $295. The claim read $510. The gap is caught, not paid.</li>
+        <li><b>A Singapore hotel.</b> S$225 on the receipt, claimed as $235. At the reference rate S$225 is about $176, so the claim is overstated by roughly $59. The model reads the receipt in its own currency, sees the gap, and asks a person to check it.</li>
+        <li><b>The submit side too.</b> An employee types "team dinner, about ₹6,400". The draft comes back as ₹6,400 paid, $74.88 to reimburse, not a $6,400 claim. Code does the conversion the same way on both surfaces.</li>
       </ul>
       <p style="font-size:9.4pt; margin-top:2mm">Conversion is not just a display. It is where a foreign over-claim becomes visible. A raw dollar figure hides it. The receipt in its own currency does not.</p>
       <div style="margin-top:3mm">
-        <div class="fx"><b>₹1,950</b> <span class="arw">→</span> <b>$23.40</b> &nbsp; <span class="note" style="font-style:normal">Swiggy lunch, cleared</span></div><br>
-        <div class="fx" style="margin-top:2mm"><b>S$62.00</b> <span class="arw">→</span> <b>$45.94</b> &nbsp; <span class="note" style="font-style:normal">Singapore dinner, to a person</span></div><br>
-        <div class="fx" style="margin-top:2mm"><b>£140.00</b> <span class="arw">→</span> <b>$177.80</b> &nbsp; <span class="note" style="font-style:normal">claim said $235, flagged</span></div>
+        <div class="fx"><b>₹1,950</b> <span class="arw">→</span> <b>$22.82</b> &nbsp; <span class="note" style="font-style:normal">Swiggy lunch, cleared</span></div><br>
+        <div class="fx" style="margin-top:2mm"><b>S$62.00</b> <span class="arw">→</span> <b>$48.42</b> &nbsp; <span class="note" style="font-style:normal">Singapore dinner, to a person</span></div><br>
+        <div class="fx" style="margin-top:2mm"><b>S$225</b> <span class="arw">→</span> <b>$175.73</b> &nbsp; <span class="note" style="font-style:normal">claim said $235, flagged</span></div>
       </div>
     </div>
   </div>
@@ -460,12 +460,12 @@
       <tr><td>Real double-submission</td><td class="tag-cell">code, model</td><td>EXP-1021 and 1022 Notion</td><td>reject the duplicate</td></tr>
       <tr><td>Legitimate split, not a duplicate</td><td class="tag-cell">code, model</td><td>EXP-1014 and 1015 Artjuna</td><td>approve both</td></tr>
       <tr><td>Cap-avoidance split</td><td class="tag-cell">model</td><td>EXP-1027 and 1028 Barbeque Nation</td><td>one dinner, flagged</td></tr>
-      <tr><td>Alcohol on the receipt</td><td class="tag-cell">model</td><td>EXP-1013 Goa dinner</td><td>deducted, reimburse $187.84</td></tr>
-      <tr><td>Personal item on the receipt</td><td class="tag-cell">model</td><td>EXP-1024 ITC hotel</td><td>deducted, reimburse $195</td></tr>
+      <tr><td>Alcohol on the receipt</td><td class="tag-cell">model</td><td>EXP-1013 Goa dinner</td><td>deducted, reimburse $183.48</td></tr>
+      <tr><td>Personal item on the receipt</td><td class="tag-cell">model</td><td>EXP-1024 ITC hotel</td><td>deducted, reimburse $190</td></tr>
       <tr><td>Mis-categorization to dodge a cap</td><td class="tag-cell">model</td><td>EXP-1023 barbecue as travel</td><td>category flagged</td></tr>
       <tr><td>Illegible receipt</td><td class="tag-cell">model</td><td>EXP-1026 faded auto</td><td>total unreadable, to a person</td></tr>
       <tr><td>Foreign currency, auto-converted</td><td class="tag-cell">code, model</td><td>every INR, SGD, GBP, EUR receipt</td><td>converted, rate confirmed</td></tr>
-      <tr><td>Foreign over-claim</td><td class="tag-cell">model</td><td>EXP-1029 London, 1034 flight</td><td>implied rate too high</td></tr>
+      <tr><td>Foreign over-claim</td><td class="tag-cell">model</td><td>EXP-1029 Singapore hotel</td><td>implied rate too high</td></tr>
       <tr><td>Receipt date does not match the claim</td><td class="tag-cell">model, guardrail</td><td>EXP-1030 Truffles</td><td>date gap, to a person</td></tr>
       <tr><td>Double gratuity</td><td class="tag-cell">model</td><td>EXP-1031 service plus tip</td><td>flagged to confirm</td></tr>
       <tr><td>File is not a receipt</td><td class="tag-cell">model</td><td>EXP-1037 conference poster</td><td>refused, asks for the receipt</td></tr>
@@ -518,7 +518,7 @@ Run 3  <span class="k">"decision"</span>: <span class="r">"approve"</span>      
     </figure>
     <figure>
       <div class="shot"><img src="showcase-assets/submit-review.png" alt="Review step"/></div>
-      <figcaption><b>2. Confirm.</b> The model fills every field. Merchant, category, amount, currency, cost center, and a resolved date. It shows the draft back, the OCR-shown-back pattern from the brief, with a plain list of what is still missing.</figcaption>
+      <figcaption><b>2. Confirm.</b> The model fills every field and shows the draft back, the OCR-shown-back pattern from the brief. Note the top line: a rupee amount typed as "₹6,400" comes back as <b>₹6,400 paid, $74.88 to reimburse</b>, converted in code, never a $6,400 claim. A plain list names what is still missing.</figcaption>
     </figure>
   </div>
   <div class="two" style="margin-top:4mm; gap:6mm; align-items:center">
@@ -563,7 +563,8 @@ Run 3  <span class="k">"decision"</span>: <span class="r">"approve"</span>      
       <h3>Ready for a demo</h3>
       <ul class="ticks">
         <li><b>Reset demo.</b> A confirmed reset returns the queue to its 38-case start, so anyone can run it from the top.</li>
-        <li><b>Mobile.</b> The employee submit and the review panel both work on a phone.</li>
+        <li><b>Fully mobile.</b> The whole console works on a phone. The queue rows reflow, the case panel goes full screen, and the amounts stay legible at 375&#8239;px.</li>
+        <li><b>USD or INR.</b> One header toggle flips every amount in the console between dollars and rupees.</li>
         <li><b>Honest states.</b> A clearly labeled mock mode when no API key is present.</li>
         <li><b>Peak and end.</b> An inbox-zero all-caught-up, a warm sent-to-approvals.</li>
       </ul>

@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { fmtMoney } from "@/components/badges";
+import { fmt } from "@/lib/currency";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/components/Toast";
 import type { Employee } from "@/lib/types";
 import type { ExpenseDraft } from "@/lib/extract";
 
 const EXAMPLES = [
-  "Team lunch at Chipotle yesterday after the sprint review, about $34, receipt attached",
-  "Uber from the office to the client QBR this morning, $32.75",
+  "Team lunch on Swiggy after standup, about ₹1,900, receipt attached",
+  "Ola from the office to the client meeting this morning, ₹2,730",
   "Figma seat for July, $45, billed to my card",
-  "Dinner with a candidate at Nopa last night, around 90 euros, cash — no receipt yet",
+  "Dinner with a candidate at Toit last night, around ₹6,000, paid by card",
 ];
 
 const EMPLOYEES: Employee[] = [
@@ -21,6 +22,7 @@ const EMPLOYEES: Employee[] = [
   { name: "Ananya Iyer", email: "ananya.iyer@flowco.com", department: "Product" },
   { name: "Arjun Nair", email: "arjun.nair@flowco.com", department: "Customer Success" },
   { name: "Kavya Reddy", email: "kavya.reddy@flowco.com", department: "Engineering" },
+  { name: "Shreyasi Das", email: "shreyasi.das@flowco.com", department: "Data Science" },
   { name: "Rohan Gupta", email: "rohan.gupta@flowco.com", department: "Marketing" },
 ];
 
@@ -29,7 +31,12 @@ type Phase = "compose" | "extracting" | "review" | "submitting" | "done";
 export default function SubmitPage() {
   const [employee, setEmployee] = useState(EMPLOYEES[0]);
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState<{ base64: string; mediaType: "image/png" | "image/jpeg"; preview: string } | null>(null);
+  const [file, setFile] = useState<{
+    base64: string;
+    mediaType: "image/png" | "image/jpeg" | "application/pdf";
+    preview: string | null;
+    name: string;
+  } | null>(null);
   const [draft, setDraft] = useState<ExpenseDraft | null>(null);
   const [phase, setPhase] = useState<Phase>("compose");
   const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -40,22 +47,28 @@ export default function SubmitPage() {
 
   const reset = () => {
     setDescription("");
-    setImage(null);
+    setFile(null);
     setDraft(null);
     setSubmittedId(null);
     setError(null);
     setPhase("compose");
   };
 
-  const onFile = (file: File | undefined) => {
-    if (!file) return;
-    const mediaType = file.type === "image/jpeg" ? "image/jpeg" : "image/png";
+  const onFile = (picked: File | undefined) => {
+    if (!picked) return;
+    const isPdf = picked.type === "application/pdf";
+    const mediaType = isPdf ? "application/pdf" : picked.type === "image/jpeg" ? "image/jpeg" : "image/png";
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      setImage({ base64: dataUrl.split(",")[1], mediaType, preview: dataUrl });
+      setFile({
+        base64: dataUrl.split(",")[1],
+        mediaType,
+        preview: isPdf ? null : dataUrl,
+        name: picked.name,
+      });
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(picked);
   };
 
   const extract = async () => {
@@ -67,8 +80,8 @@ export default function SubmitPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description,
-          imageBase64: image?.base64 ?? null,
-          imageMediaType: image?.mediaType ?? null,
+          fileBase64: file?.base64 ?? null,
+          fileMediaType: file?.mediaType ?? null,
         }),
       });
       const data = await res.json();
@@ -92,8 +105,8 @@ export default function SubmitPage() {
         body: JSON.stringify({
           employee,
           draft,
-          imageBase64: image?.base64 ?? null,
-          imageMediaType: image?.mediaType ?? null,
+          fileBase64: file?.base64 ?? null,
+          fileMediaType: file?.mediaType ?? null,
         }),
       });
       const data = await res.json();
@@ -187,16 +200,26 @@ export default function SubmitPage() {
               </div>
             )}
 
-            <label className="mb-1 block text-xs font-medium text-ink-faint">Receipt photo (optional)</label>
+            <label className="mb-1 block text-xs font-medium text-ink-faint">
+              Receipt photo or PDF (optional)
+            </label>
             <input
               type="file"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,application/pdf"
               onChange={(e) => onFile(e.target.files?.[0])}
               className="mb-3 block w-full text-sm text-ink-soft file:mr-3 file:rounded file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent"
             />
-            {image && (
+            {file && file.preview && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={image.preview} alt="Receipt preview" className="mb-4 max-h-48 rounded border border-line" />
+              <img src={file.preview} alt="Receipt preview" className="mb-4 max-h-48 rounded border border-line" />
+            )}
+            {file && !file.preview && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2 text-sm">
+                <span className="flex h-8 w-8 items-center justify-center rounded bg-danger-soft text-[10px] font-bold text-danger">
+                  PDF
+                </span>
+                <span className="truncate text-ink-soft">{file.name}</span>
+              </div>
             )}
 
             <button
@@ -217,13 +240,30 @@ export default function SubmitPage() {
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-ink-faint">
               Check what the assistant filled in
             </h2>
+            {draft.receiptCurrency !== "USD" && draft.nativeTotal !== null && draft.total !== null && (
+              <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-accent/25 bg-accent-soft/50 px-3.5 py-2.5 text-sm">
+                <span className="text-ink-soft">
+                  Paid <span className="figure font-semibold text-ink">{fmt(draft.nativeTotal, draft.receiptCurrency)}</span>
+                </span>
+                <span className="text-accent" aria-hidden>
+                  →
+                </span>
+                <span className="text-ink-soft">
+                  Reimburse <span className="figure font-semibold text-ink">{fmtMoney(draft.total)}</span>
+                </span>
+              </div>
+            )}
             <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <Field label="Merchant" value={draft.merchant ?? "—"} />
               <Field label="Category" value={draft.category ?? "—"} />
               <Field label="Date" value={draft.transactionDate ?? "—"} mono />
-              <Field label="Total" value={draft.total !== null ? fmtMoney(draft.total) : "—"} mono />
-              <Field label="Amount" value={draft.amount !== null ? fmtMoney(draft.amount) : "—"} mono />
-              <Field label="Tax / tip" value={`${draft.tax !== null ? fmtMoney(draft.tax) : "—"} / ${draft.tip !== null ? fmtMoney(draft.tip) : "—"}`} mono />
+              <Field
+                label={draft.receiptCurrency !== "USD" ? "Reimburse (USD)" : "Total"}
+                value={draft.total !== null ? fmtMoney(draft.total) : "—"}
+                mono
+              />
+              <Field label="Amount (USD)" value={draft.amount !== null ? fmtMoney(draft.amount) : "—"} mono />
+              <Field label="Tax / tip (USD)" value={`${draft.tax !== null ? fmtMoney(draft.tax) : "—"} / ${draft.tip !== null ? fmtMoney(draft.tip) : "—"}`} mono />
             </div>
             <div className="mb-3 rounded bg-paper px-3 py-2 text-sm">
               <span className="text-xs text-ink-faint">Purpose </span>
