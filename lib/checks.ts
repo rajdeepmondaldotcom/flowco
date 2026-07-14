@@ -14,6 +14,7 @@ export const DEPARTMENT_COST_CENTERS: Record<string, string> = {
   "Customer Success": "CC-2400 CS",
   Product: "CC-3300 Product",
   Engineering: "CC-3100 Engineering",
+  "Data Science": "CC-3200 Data Science",
   Marketing: "CC-2600 Marketing",
 };
 
@@ -129,12 +130,26 @@ function amountLimitCheck(expense: Expense, policy: Policy) {
 }
 
 function currencyCheck(expense: Expense, policy: Policy) {
-  const mismatch = expense.receiptCurrency !== policy.claimCurrency;
+  const foreign = expense.receiptCurrency !== policy.claimCurrency;
+  if (!foreign) {
+    return { status: "pass" as const, note: `Receipt and claim are both in ${policy.claimCurrency}` };
+  }
+  const rate = policy.fxToUsd?.[expense.receiptCurrency];
+  // A small local expense (a lunch, a cab) with a known reference rate is
+  // converted automatically and cleared — no human needed for the rate. Larger
+  // foreign amounts still go to a human to confirm the rate before pay.
+  const small = rate !== undefined && expense.total <= policy.smallForeignAutoClearUsd;
+  if (small) {
+    return {
+      status: "pass" as const,
+      note: `Receipt is in ${expense.receiptCurrency}; auto-converted to ${money(expense.total)} at the reference rate (1 ${expense.receiptCurrency} = ${money(rate)}). Small local amount, cleared.`,
+    };
+  }
   return {
-    status: mismatch ? ("warn" as const) : ("pass" as const),
-    note: mismatch
-      ? `Receipt is in ${expense.receiptCurrency} but the claim is in ${policy.claimCurrency} — conversion cannot be verified deterministically`
-      : `Receipt and claim are both in ${policy.claimCurrency}`,
+    status: "warn" as const,
+    note: rate
+      ? `Receipt is in ${expense.receiptCurrency}; the claim is in ${policy.claimCurrency}. Auto-converting at the reference rate 1 ${expense.receiptCurrency} = ${money(rate)}. A human confirms the rate before pay.`
+      : `Receipt is in ${expense.receiptCurrency} but the claim is in ${policy.claimCurrency}, and no reference rate is on file — needs a human to convert.`,
   };
 }
 

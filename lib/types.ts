@@ -128,7 +128,10 @@ export interface TriageVerdict {
   confidence: number; // 0-1, model's own confidence in its recommendation
   receiptExtraction: ReceiptExtraction | null;
   receiptMatch: {
-    status: "match" | "mismatch" | "uncertain" | "no_receipt";
+    // "not_a_receipt" = the uploaded file isn't a receipt/invoice at all
+    // (a poster, a screenshot, a book, a random photo). The model must say so
+    // and never fabricate a reconciliation from junk.
+    status: "match" | "mismatch" | "uncertain" | "no_receipt" | "not_a_receipt";
     claimedTotal: number;
     extractedTotal: number | null;
     note: string;
@@ -173,6 +176,9 @@ export interface Policy {
   autoApproveLimit: number;
   hardReviewLimit: number;
   duplicateWindowDays: number;
+  fxToUsd: Record<string, number>;
+  fxNote: string;
+  smallForeignAutoClearUsd: number;
   reimbursement: {
     alcohol: "not_reimbursable" | "reimbursable";
     note: string;

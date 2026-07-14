@@ -32,7 +32,7 @@ const VerdictSchema = z.object({
     .nullable()
     .describe("What the receipt image actually shows; null if there is no receipt"),
   receiptMatch: z.object({
-    status: z.enum(["match", "mismatch", "uncertain", "no_receipt"]),
+    status: z.enum(["match", "mismatch", "uncertain", "no_receipt", "not_a_receipt"]),
     claimedTotal: z.number(),
     extractedTotal: z.number().nullable().describe("Receipt total in the RECEIPT's own currency"),
     note: z.string().describe("Plain-English reconciliation of receipt vs claim"),
@@ -109,7 +109,8 @@ Rules:
 - CATEGORY: Check that the filed category fits the merchant and receipt. Watch for a meal filed as "travel" or "other", or anything mis-filed in a way that dodges a lower category cap. If it looks wrong, fill in "categoryCheck" with the suggested category and the cap it would breach if re-filed correctly.
 - DATE: If the receipt's date clearly doesn't match the claimed transaction date, note it in "dateNote" (leave it an empty string when the dates agree). A date discrepancy always goes to a human to confirm.
 - TIP / SERVICE CHARGE: If a gratuity or service charge is ALREADY included on the receipt (e.g. "Service Charge 18%", "Gratuity included") and an ADDITIONAL tip was written on top, flag the double gratuity — note both amounts and recommend the approver confirm the added tip is intended before it's reimbursed. Do not silently clear a bill that was tipped twice.
-- FOREIGN CURRENCY: When the receipt is in a different currency than the claim (claims are in USD), fill in "currencyReconciliation" — the receipt total in its own currency, the implied FX rate, and whether that rate is plausible for the date. You cannot verify the exact rate used, so say so and route to a human.
+- FOREIGN CURRENCY / AUTOMATIC CONVERSION: FlowCo reimburses in USD; employees pay in local currency (INR, SGD, GBP, EUR, and so on). The policy JSON includes "fxToUsd" reference rates. When the receipt is in a different currency than the claim, CONVERT the receipt total to USD using the reference rate for that currency, and fill in "currencyReconciliation": the receipt total in its own currency, the implied rate the CLAIM used (claimedTotal / receiptTotal), and whether that implied rate is close to the reference rate. If the claim's implied rate is far from the reference (the employee over- or under-converted), say so — that is a likely over-claim. Always route foreign-currency claims to a human to confirm the rate before pay. State the converted USD amount plainly in your summary.
+- NOT A RECEIPT (junk / false positive): Before anything else, check that the uploaded file is actually a receipt or invoice for a purchase. If it is clearly NOT — a conference poster, a book, a slide, a screenshot of a chat or app, a random photo, a document with no merchant/total/line-items — do NOT invent a reconciliation from it. Set receiptMatch.status to "not_a_receipt", say plainly what the file actually appears to be, list it in "unresolved", recommend "request_info" with a drafted message asking for the real receipt, and route to a human. Never fabricate an amount from a non-receipt.
 - Be explicit about what you could NOT resolve. Never paper over ambiguity — an honest "I can't verify X" is the most valuable thing you produce.
 - Policy exceptions are the approver's call, not yours. FlowCo policy allows entertainment above the meals cap at the approver's discretion with a documented business purpose — when you see that pattern, lay out the evidence (per-person math if a group meal) and route to the human.
 - COST CENTER / GL CODE: The deterministic checks tell you whether the claim is coded to the employee's own department cost center. If it's flagged as a possible mis-tag, note the expected vs. actual cost center and draft a one-line confirmation — this is the "wrong cost center" case from the manual workflow. Don't guess the correct code; ask.
@@ -219,13 +220,23 @@ function applyGuardrail(checks: DeterministicChecks, model: ModelVerdict): "clea
   if (checksRequireHuman(checks)) return "needs_human";
   if (model.verdict === "needs_human") return "needs_human";
   if (model.confidence < CONFIDENCE_FLOOR) return "needs_human";
-  if (model.receiptMatch.status === "mismatch" || model.receiptMatch.status === "uncertain")
+  // A receipt the model itself calls low-legibility must go to a human, even if
+  // the inferred total happens to reconcile. Guessing is not confirming.
+  if (model.receiptExtraction?.legibilityConfidence === "low") return "needs_human";
+  if (
+    model.receiptMatch.status === "mismatch" ||
+    model.receiptMatch.status === "uncertain" ||
+    model.receiptMatch.status === "not_a_receipt"
+  )
     return "needs_human";
   // If the model found money that must be deducted (alcohol, other
   // non-reimbursables), a human must confirm the reduced amount before pay.
   if (model.nonReimbursable && model.nonReimbursable.subtotalExcluded > 0.005) return "needs_human";
-  // Foreign-currency claims can't be auto-cleared — the FX rate isn't verifiable in code.
-  if (model.currencyReconciliation) return "needs_human";
+  // Foreign currency is auto-converted at a reference rate. A large foreign
+  // amount is already held by the deterministic currency check; here we catch
+  // the small ones where the model found the claim's implied rate implausible
+  // (a likely over-conversion), which a human should confirm.
+  if (model.currencyReconciliation && !model.currencyReconciliation.plausible) return "needs_human";
   // A suspected mis-categorization (often to dodge a cap) needs a human.
   if (model.categoryLooksWrong) return "needs_human";
   // A date discrepancy between the receipt and the claim is a human confirm —

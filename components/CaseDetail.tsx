@@ -351,27 +351,25 @@ export default function CaseDetail({
 
           {fx && (
             <>
-              <SectionTitle>
-                Currency · {fx.receiptCurrency} receipt vs {fx.claimCurrency} claim
-              </SectionTitle>
+              <SectionTitle>Currency · auto-converted to USD</SectionTitle>
               <div className="mb-5 rounded-md border border-line">
                 <ReconRow
-                  label={`Receipt total (${fx.receiptCurrency})`}
+                  label={`Receipt (${fx.receiptCurrency})`}
                   value={fx.receiptTotal !== null ? fmtMoney(fx.receiptTotal, fx.receiptCurrency) : "—"}
                 />
-                <ReconRow label={`Claimed (${fx.claimCurrency})`} value={fmtMoney(fx.claimedTotal, fx.claimCurrency)} />
                 {fx.impliedRate !== null && (
                   <ReconRow
-                    label="Implied rate"
-                    value={fx.receiptCurrency === "INR" ? `${(1 / fx.impliedRate).toFixed(1)} INR / USD` : fx.impliedRate.toFixed(4)}
+                    label="Reference rate"
+                    value={fx.receiptCurrency === "INR" ? `${(1 / fx.impliedRate).toFixed(1)} INR / USD` : `${fx.impliedRate.toFixed(4)} ${fx.claimCurrency}`}
                   />
                 )}
+                <ReconRow label="Converted (USD)" value={fmtMoney(fx.claimedTotal, fx.claimCurrency)} strong />
                 <div
                   className={`border-t border-line px-3 py-2 text-xs font-semibold uppercase tracking-wide ${
                     fx.plausible ? "bg-flag-soft text-flag" : "bg-danger-soft text-danger"
                   }`}
                 >
-                  {fx.plausible ? "plausible — needs a human sanity-check" : "rate looks off"}
+                  {fx.plausible ? "rate checks out — human confirms before pay" : "implied rate looks off"}
                 </div>
                 <p className="px-3 py-2 text-xs text-ink-soft">{fx.note}</p>
               </div>
@@ -590,11 +588,13 @@ function Field({ label, value, mono, strong }: { label: string; value: string; m
   );
 }
 
-function ReconRow({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
+function ReconRow({ label, value, alert, strong }: { label: string; value: string; alert?: boolean; strong?: boolean }) {
   return (
     <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-sm last:border-b-0">
       <span className="text-ink-soft">{label}</span>
-      <span className={`figure ${alert ? "font-semibold text-danger" : ""}`}>{value}</span>
+      <span className={`figure ${alert ? "font-semibold text-danger" : strong ? "font-semibold text-ink" : ""}`}>
+        {value}
+      </span>
     </div>
   );
 }

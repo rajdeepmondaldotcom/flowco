@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Policy, TriagedExpense } from "@/lib/types";
-import { FLAG_EXPLAIN, flagsFor, fmtDate, fmtMoney, StatusChip } from "./badges";
+import { FLAG_EXPLAIN, flagsFor, foreignAmount, fmtDate, fmtMoney, StatusChip } from "./badges";
 import CaseDetail from "./CaseDetail";
 import ThemeToggle from "./ThemeToggle";
 import { useToast } from "./Toast";
@@ -884,8 +884,11 @@ function Row({
         ))}
       </span>
       <span className="figure w-12 shrink-0 text-right text-xs text-ink-faint">{fmtDate(expense.transactionDate)}</span>
-      <span className="figure w-20 shrink-0 text-right text-sm font-semibold">
-        {fmtMoney(expense.total, expense.currency)}
+      <span className="figure flex w-24 shrink-0 flex-col items-end justify-center leading-tight">
+        <span className="text-sm font-semibold">{fmtMoney(expense.total, expense.currency)}</span>
+        {foreignAmount(expense) && (
+          <span className="text-[10px] font-normal text-ink-faint">{foreignAmount(expense)}</span>
+        )}
       </span>
       <span className="w-24 shrink-0 text-right">
         <StatusChip status={expense.status} />

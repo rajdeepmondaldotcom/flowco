@@ -11,6 +11,17 @@
   "autoApproveLimit": 500,
   "hardReviewLimit": 1000,
   "duplicateWindowDays": 3,
+  "fxToUsd": {
+    "USD": 1,
+    "INR": 0.012,
+    "SGD": 0.741,
+    "GBP": 1.27,
+    "EUR": 1.08,
+    "AED": 0.272,
+    "JPY": 0.0064
+  },
+  "fxNote": "Reference rates to convert a foreign receipt to USD, the claim currency. FlowCo reimburses in USD; employees pay in local currency and the assistant converts automatically at these reference rates, then flags any claim that does not match the converted receipt.",
+  "smallForeignAutoClearUsd": 40,
   "reimbursement": {
     "alcohol": "not_reimbursable",
     "note": "Alcohol is never reimbursable. When a receipt includes alcohol, deduct the alcohol line(s) plus their tax and reimburse only the remainder."

@@ -26,12 +26,35 @@ export const FLAG_EXPLAIN: Record<string, string> = {
   "possible duplicate": "Same employee and merchant nearby in time — could be a re-submission or a split bill.",
   "missing receipt": "No receipt attached, and one is required over $25.",
   "wrong cost center": "Coded to a cost center that doesn't match the employee's department.",
-  "foreign currency": "The receipt is in a different currency than the claim; the FX rate can't be verified in code.",
+  "foreign currency": "The receipt is in a foreign currency. The assistant auto-converted it to USD at the reference rate; a human confirms the rate before pay.",
   "ambiguous receipt": "The receipt didn't cleanly reconcile against the claim.",
+  "not a receipt": "The uploaded file isn't a receipt at all — a poster, a screenshot, or a random file. The assistant refused to invent an amount.",
   "date mismatch": "The receipt's date doesn't match the claimed transaction date — worth confirming.",
   "needs a look": "The assistant found a judgment call it thinks a human should confirm — see its rationale.",
   "low confidence": "The assistant wasn't confident enough to clear this on its own.",
 };
+
+// Reference rates mirror data/policy.json fxToUsd — used to show the receipt's
+// original local amount next to the converted USD claim.
+const FX_TO_USD: Record<string, number> = {
+  USD: 1, INR: 0.012, SGD: 0.741, GBP: 1.27, EUR: 1.08, AED: 0.272, JPY: 0.0064,
+};
+const FX_SYMBOL: Record<string, string> = {
+  INR: "₹", SGD: "S$", GBP: "£", EUR: "€", AED: "AED ", JPY: "¥",
+};
+
+// The receipt's original foreign amount, derived from the USD claim at the
+// reference rate (the totals in the seed are set from the local amount, so this
+// reverses exactly). Returns null for USD receipts.
+export function foreignAmount(e: { total: number; receiptCurrency: string }): string | null {
+  if (!e.receiptCurrency || e.receiptCurrency === "USD") return null;
+  const rate = FX_TO_USD[e.receiptCurrency];
+  if (!rate) return null;
+  const orig = e.total / rate;
+  const sym = FX_SYMBOL[e.receiptCurrency] ?? `${e.receiptCurrency} `;
+  const rounded = orig >= 100 ? Math.round(orig) : Math.round(orig * 100) / 100;
+  return sym + rounded.toLocaleString("en-IN");
+}
 
 const ALCOHOL_RE = /alcohol|wine|beer|cocktail|spirit|liquor|\bbar\b|mudslide|vodka|whisk|\brum\b|\bgin\b|tequila/i;
 
@@ -51,6 +74,7 @@ export function flagsFor(e: TriagedExpense): string[] {
   if (e.checks.receiptPresence.status === "fail") flags.push("missing receipt");
   if (e.checks.costCenter.status === "warn") flags.push("wrong cost center");
   if (e.checks.currency.status === "warn") flags.push("foreign currency");
+  if (v.engine !== "mock" && v.receiptMatch.status === "not_a_receipt") flags.push("not a receipt");
   if (
     v.engine !== "mock" &&
     (v.receiptMatch.status === "mismatch" || v.receiptMatch.status === "uncertain")

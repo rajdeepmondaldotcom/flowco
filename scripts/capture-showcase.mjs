@@ -13,19 +13,16 @@ mkdirSync(outDir, { recursive: true });
 // Each capability → the case that proves it, in the order they appear in the doc.
 const CASES = [
   ["EXP-1013", "alcohol"], // alcohol line deducted + FX + over-cap discretion (the signature)
-  ["EXP-1024", "personal-item"], // in-room movie deducted
-  ["EXP-1023", "category"], // steakhouse filed as travel
-  ["EXP-1022", "duplicate-true"], // true double-submission
-  ["EXP-1027", "split-evasive"], // cap-avoidance split
-  ["EXP-1014", "duplicate-legit"], // legit split (the contrast)
-  ["EXP-1026", "illegible"], // model admits it can't read the total
-  ["EXP-1029", "fx-overclaim"], // GBP receipt, inflated USD claim
-  ["EXP-1030", "date"], // receipt date != claimed date
-  ["EXP-1031", "tip"], // double gratuity
-  ["EXP-1025", "pdf"], // PDF invoice, clean clear
-  ["EXP-1018", "missing-receipt"], // no receipt over $25
-  ["EXP-1008", "failure-fix"], // handwritten-tip gray zone (the fixed failure case)
-  ["EXP-1017", "cost-center"], // wrong GL code
+  ["EXP-1024", "personal-item"], // ITC in-room movie deducted
+  ["EXP-1026", "illegible"], // faded auto-rickshaw, low legibility -> human
+  ["EXP-1019", "currency"], // Air India INR -> USD auto-conversion
+  ["EXP-1023", "category"], // barbecue dinner filed as travel
+  ["EXP-1027", "split-evasive"], // cap-avoidance split (Barbeque Nation)
+  ["EXP-1031", "tip"], // double gratuity (Fatty Bao)
+  ["EXP-1030", "date"], // receipt date != claimed date (Truffles)
+  ["EXP-1022", "duplicate-true"], // true double-submission (Notion)
+  ["EXP-1014", "duplicate-legit"], // legit split (Artjuna, the contrast)
+  ["EXP-1037", "not-a-receipt"], // conference poster, not a receipt
 ];
 
 async function newCtx(browser, theme, height = 1000) {
