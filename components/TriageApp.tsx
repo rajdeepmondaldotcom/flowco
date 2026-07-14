@@ -23,6 +23,7 @@ export default function TriageApp() {
   const [query, setQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const [onboardingClosed, setOnboardingClosed] = useState(false);
   const toast = useToast();
 
@@ -233,6 +234,10 @@ export default function TriageApp() {
         setShowShortcuts(false);
         return;
       }
+      if (confirmingReset) {
+        if (e.key === "Escape") setConfirmingReset(false);
+        return; // the confirm dialog owns the keyboard while open
+      }
       if (selectedId) return; // panel owns its keys
       if (e.key === "j" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -253,7 +258,7 @@ export default function TriageApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, cursor, visibleOrder, showShortcuts]);
+  }, [selectedId, cursor, visibleOrder, showShortcuts, confirmingReset]);
 
   const selected = expenses.find((e) => e.id === selectedId) ?? null;
   const pendingCount = expenses.filter((e) => e.status === "pending").length;
@@ -307,10 +312,11 @@ export default function TriageApp() {
               Employee submit
             </a>
             <button
-              onClick={resetDemo}
+              onClick={() => setConfirmingReset(true)}
+              title="Reset the demo to its starting state — all expenses back to un-triaged"
               className="rounded-md border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink-soft transition hover:bg-paper"
             >
-              Reset
+              Reset demo
             </button>
             <button
               onClick={runTriage}
@@ -411,7 +417,7 @@ export default function TriageApp() {
           <InboxZero
             resolved={metrics.resolvedCount}
             recovered={metrics.recovered}
-            onReset={resetDemo}
+            onReset={() => setConfirmingReset(true)}
           />
         )}
 
@@ -533,6 +539,42 @@ export default function TriageApp() {
       )}
 
       {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
+
+      {confirmingReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div
+            className="fade-in absolute inset-0 bg-ink/40 backdrop-blur-[1px]"
+            onClick={() => setConfirmingReset(false)}
+            aria-hidden
+          />
+          <div className="panel-in shadow-float relative w-full max-w-md rounded-2xl border border-line bg-surface p-6">
+            <h3 className="display text-lg font-semibold text-ink">Reset the demo to the start?</h3>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">
+              This returns the queue to its starting point — all{" "}
+              <span className="figure font-semibold text-ink">{expenses.length}</span>{" "}expenses go
+              back to freshly&#8209;submitted (un&#8209;triaged), and every approval, rejection, and info
+              request is cleared. It&rsquo;s the clean slate to run a demo from the beginning.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmingReset(false)}
+                className="rounded-md border border-line-strong px-4 py-2 text-[13px] font-medium text-ink-soft transition hover:bg-paper"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmingReset(false);
+                  resetDemo();
+                }}
+                className="rounded-md bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-110"
+              >
+                Reset to start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

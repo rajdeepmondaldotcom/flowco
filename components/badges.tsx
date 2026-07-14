@@ -28,6 +28,8 @@ export const FLAG_EXPLAIN: Record<string, string> = {
   "wrong cost center": "Coded to a cost center that doesn't match the employee's department.",
   "foreign currency": "The receipt is in a different currency than the claim; the FX rate can't be verified in code.",
   "ambiguous receipt": "The receipt didn't cleanly reconcile against the claim.",
+  "date mismatch": "The receipt's date doesn't match the claimed transaction date — worth confirming.",
+  "needs a look": "The assistant found a judgment call it thinks a human should confirm — see its rationale.",
   "low confidence": "The assistant wasn't confident enough to clear this on its own.",
 };
 
@@ -54,7 +56,14 @@ export function flagsFor(e: TriagedExpense): string[] {
     (v.receiptMatch.status === "mismatch" || v.receiptMatch.status === "uncertain")
   )
     flags.push("ambiguous receipt");
-  if (flags.length === 0 && v.confidence < 0.8) flags.push("low confidence");
+  if (v.engine !== "mock" && v.dateNote.trim()) flags.push("date mismatch");
+  // Catch-all so every routed-to-human row carries at least one chip: if the
+  // model sent it to a human for a judgment call no specific flag captured
+  // (e.g. a double gratuity), surface that rather than showing a bare row.
+  if (flags.length === 0) {
+    if (v.confidence < 0.8) flags.push("low confidence");
+    else if (v.verdict === "needs_human") flags.push("needs a look");
+  }
   return flags;
 }
 

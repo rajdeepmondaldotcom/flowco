@@ -9,7 +9,7 @@
 
 ## 0:30–2:00 — Happy path
 
-1. Show the queue: 25 submitted expenses, all awaiting triage.
+1. Show the queue: 31 submitted expenses, all awaiting triage.
 2. Click **Run assistant triage**. Narrate while rows move: "For every expense: deterministic checks run in code — policy caps, duplicate detection, amount limits. Then Claude reads the actual receipt image, reconciles it against the claim, and fills a schema-constrained verdict."
 3. Point at the two lanes forming: "Eight landed in *Ready to clear* — about a third, every check passed and the model found nothing to question. Two nuances worth pointing at: one cleared with **no receipt at all** — parking under $25, and policy only requires receipts above $25; and one of the clean ones is a **PDF invoice**, not a photo — the same engine reads PDFs natively. The assistant knows the policy nuance instead of blindly flagging."
 4. Open one clear case briefly — show the reconciliation (printed total = claimed total) — then **Approve all (8)**. "Eight decisions, one click, full audit trail."

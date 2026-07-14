@@ -2,7 +2,9 @@
 
 Prototype for the Netchex Applied AI take-home. One thing, built deeply: **an AI-assisted triage queue for expense approvals** — the assistant does the investigation, the human makes the decision.
 
-**Live demo:** https://flowco-two.vercel.app — click **Run assistant triage** and watch the queue sort itself. Open **EXP-1013 (The Cape Goa)** for the showpiece: a real ₹16,823 team-dinner receipt where the assistant finds an alcohol line policy says isn't reimbursable, deducts it plus its VAT, and hands the approver the exact reimbursable amount. (`/submit` is the optional employee side.) The demo resets to seed data via the **Reset** button.
+**Live demo:** https://flowco-two.vercel.app — click **Run assistant triage** and watch the queue sort itself. Open **EXP-1013 (The Cape Goa)** for the showpiece: a real ₹16,823 team-dinner receipt where the assistant finds an alcohol line policy says isn't reimbursable, deducts it plus its VAT, and hands the approver the exact reimbursable amount. (`/submit` is the optional employee side.) **Reset demo** returns the queue to its 31-case starting point so anyone can run it from the top.
+
+**📄 Capability showcase (PDF):** [`docs/FlowCo-Approvals-Triage-Showcase.pdf`](docs/FlowCo-Approvals-Triage-Showcase.pdf) — a 16-page walkthrough mapping every requirement in the brief to a working, screenshotted feature, including the failure story. Regenerate it with `node scripts/capture-showcase.mjs && node scripts/render-showcase-pdf.mjs`.
 
 ## The product idea in one paragraph
 
@@ -39,9 +41,14 @@ The PDF's manual workflow lists exactly what makes an approver stop and dig. Eac
 | **Wrong category (to dodge a cap)** | model | EXP-1023 — a $185 steakhouse dinner filed as "travel" (cap $500) instead of "meals" (cap $100) |
 | **Personal item on a receipt** | model (vision) | EXP-1024 — a hotel folio with a $18.99 in-room movie the model deducts (reimburse $195.01) |
 | **Receipt is a PDF, not a photo** | model (document) | EXP-1025 — a real Canva `.pdf` invoice the model reads and clears |
+| **Illegible / unreadable receipt** | model (vision) | EXP-1026 — a faded taxi receipt; the model reconciles the line items but flags the smudged total as unreadable instead of guessing |
+| **Cap-avoidance split** | `duplicate` + model | EXP-1027/1028 — one $186 steakhouse dinner split into two sub-$100 checks (same table, same card, 5 min apart) |
+| **Foreign-currency over-claim** | `currency` + model FX | EXP-1029 — a £140 London hotel claimed as $235; the model flags the implausible 1.68 implied rate |
+| **Receipt date ≠ claimed date** | model + guardrail | EXP-1030 — receipt dated Jul 2, claim says Jul 6; a code guardrail keeps a date mismatch from auto-clearing |
+| **Double gratuity** | model (vision) | EXP-1031 — an 18% service charge already included, plus a tip added on top |
 | Under $500 & everything matches → one-click | all checks pass | EXP-1001–1007 auto-clear lane |
 
-Three of these — mis-categorization, a personal line item, and a **true** double-submission (vs. a legitimate split or round trip) — are things a rules engine cannot judge; the model reads the receipt and reasons about intent. And the PDF invoice case exercises the exact words "Photo or **PDF** upload" from the employee form: images go to the model as image blocks, PDFs as native document blocks.
+Several of these — mis-categorization, a personal line item, a **true** double-submission (vs. a legitimate split or a round trip), a **cap-avoidance** split, an illegible total the model refuses to guess, and a foreign-currency over-claim — are things a rules engine cannot judge; the model reads the receipt and reasons about intent. The PDF invoice case exercises the exact words "Photo or **PDF** upload" from the employee form (images go as image blocks, PDFs as native document blocks). The full queue is **31 cases**; a triage run clears **8** (about a quarter) and routes **23** to a human — the split is the product.
 
 The employee side (`/submit`) collapses the seven-screen form into one sentence + a photo: the same engine reads it, fills every field including **currency**, shows the extracted draft back to confirm (the PDF's "OCR'd amount shown back"), auto-picks the cost center, and drops it into the approver's queue.
 

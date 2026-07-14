@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FlowCo Approvals Triage — Capability Showcase</title>
+<style>
+  :root {
+    --paper: #f3f2ec; --surface: #ffffff; --surface-2: #faf9f4;
+    --ink: #111820; --ink-soft: #495663; --ink-faint: #8b95a1;
+    --line: #e6e3da; --line-strong: #d3cfc4;
+    --accent: #0c6e6b; --accent-soft: #e0edec;
+    --clear: #1a7a49; --clear-soft: #e6f2ea;
+    --flag: #a2621c; --flag-soft: #f7ecda;
+    --danger: #a83226; --danger-soft: #f6e7e3;
+    --ink-navy: #0f1720;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4; margin: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); background: var(--surface);
+    font-size: 10.2pt; line-height: 1.5;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: "SF Mono", ui-monospace, "IBM Plex Mono", Menlo, monospace; }
+
+  .page {
+    width: 210mm; min-height: 297mm; padding: 18mm 17mm 16mm;
+    page-break-after: always; position: relative; background: var(--surface);
+    display: flex; flex-direction: column;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  h1, h2, h3, .display { font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif; letter-spacing: -0.02em; }
+  h2 { font-size: 20pt; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  h3 { font-size: 12.5pt; font-weight: 700; color: var(--ink); margin-bottom: 3pt; letter-spacing: -0.01em; }
+  p { margin-bottom: 7pt; color: var(--ink-soft); }
+  strong { color: var(--ink); font-weight: 600; }
+  em { font-style: normal; color: var(--accent); font-weight: 600; }
+  a { color: var(--accent); text-decoration: none; }
+
+  .eyebrow { font-size: 8pt; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .kicker { display: flex; align-items: center; gap: 8pt; margin-bottom: 4mm; }
+  .kicker .n { font-family: -apple-system, "SF Pro Display", sans-serif; font-weight: 700; font-size: 9pt; color: var(--surface); background: var(--accent); width: 18pt; height: 18pt; border-radius: 5pt; display: flex; align-items: center; justify-content: center; }
+  .kicker .t { font-size: 8pt; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
+
+  .lead { font-size: 11.5pt; line-height: 1.55; color: var(--ink); }
+  .foot { position: absolute; bottom: 9mm; left: 17mm; right: 17mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: var(--ink-faint); border-top: 1px solid var(--line); padding-top: 3mm; letter-spacing: 0.02em; }
+  .foot .mono { color: var(--ink-faint); }
+
+  /* ---- cover ---- */
+  .cover { background: var(--ink-navy); color: #eef2f5; justify-content: space-between; padding: 22mm 20mm; }
+  .cover .grid-bg { position: absolute; inset: 0; background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0); background-size: 14px 14px; }
+  .cover .wm { display: flex; align-items: center; gap: 9pt; position: relative; }
+  .cover .logo { width: 30pt; height: 30pt; border-radius: 8pt; background: linear-gradient(135deg, #17998f, #0c6e6b); display: flex; align-items: center; justify-content: center; }
+  .cover .logo svg { width: 17pt; height: 17pt; }
+  .cover .wm .name { font-family: -apple-system, "SF Pro Display", sans-serif; font-weight: 700; font-size: 15pt; letter-spacing: -0.01em; }
+  .cover .wm .sub { color: #8fa0ad; font-size: 9pt; margin-top: 1pt; }
+  .cover .mid { position: relative; }
+  .cover h1 { font-family: -apple-system, "SF Pro Display", sans-serif; font-size: 40pt; font-weight: 700; line-height: 1.02; letter-spacing: -0.03em; color: #fff; }
+  .cover h1 .accent { color: #43c7ba; }
+  .cover .tag { font-size: 13pt; color: #b9c6d1; margin-top: 7mm; max-width: 150mm; line-height: 1.5; }
+  .cover .metas { position: relative; display: flex; gap: 16mm; border-top: 1px solid rgba(255,255,255,0.14); padding-top: 6mm; }
+  .cover .metas .k { font-size: 7.5pt; letter-spacing: 0.14em; text-transform: uppercase; color: #7f909d; margin-bottom: 2pt; }
+  .cover .metas .v { font-size: 10pt; color: #e7edf1; }
+  .cover .metas .v a { color: #43c7ba; }
+  .cover .chips { position: relative; display: flex; gap: 6pt; flex-wrap: wrap; margin-top: 2mm; }
+  .cover .chip { font-size: 8pt; border: 1px solid rgba(255,255,255,0.2); color: #cdd8e0; border-radius: 100px; padding: 3pt 9pt; }
+
+  /* ---- callout (brief quotes) ---- */
+  .callout { background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 6mm 7mm; margin: 4mm 0; }
+  .callout .label { font-size: 7.5pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 3pt; }
+  .callout p { color: var(--ink); font-style: italic; margin: 0; font-size: 10.5pt; line-height: 1.5; }
+  .callout .src { font-style: normal; color: var(--ink-faint); font-size: 8pt; margin-top: 3pt; }
+
+  /* ---- tables ---- */
+  table { width: 100%; border-collapse: collapse; margin: 3mm 0; font-size: 9pt; }
+  th { text-align: left; font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--surface); background: var(--ink-navy); padding: 4pt 8pt; font-weight: 600; }
+  th:first-child { border-radius: 5px 0 0 0; } th:last-child { border-radius: 0 5px 0 0; }
+  td { padding: 3.8pt 8pt; border-bottom: 1px solid var(--line); color: var(--ink-soft); vertical-align: top; }
+  td strong { color: var(--ink); }
+  tr:nth-child(even) td { background: var(--surface-2); }
+  .tag-cell { color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+  /* ---- two-col map ---- */
+  .map { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 8mm; margin: 3mm 0; }
+  .map .col-h { font-size: 7.5pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 2pt; border-bottom: 1px solid var(--line); }
+
+  /* ---- figures ---- */
+  figure { break-inside: avoid; margin: 0; }
+  .shot { border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; background: var(--surface-2); box-shadow: 0 3px 14px rgba(17,24,32,0.09); }
+  .shot img { width: 100%; display: block; }
+  .shot.crop { position: relative; }
+  .shot.crop img { object-fit: cover; object-position: top center; }
+  figcaption { font-size: 8.2pt; color: var(--ink-faint); margin-top: 2.5mm; line-height: 1.45; }
+  figcaption b { color: var(--ink-soft); }
+
+  .feature { display: grid; grid-template-columns: 1.15fr 1fr; gap: 8mm; align-items: start; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm 7mm; }
+  .card h3 { font-size: 11pt; }
+  .card .tags { font-size: 7.5pt; color: var(--accent); font-weight: 600; margin-bottom: 4pt; letter-spacing: 0.02em; }
+  .card p { font-size: 8.6pt; margin-top: 2mm; margin-bottom: 0; }
+
+  .pill { display: inline-block; font-size: 7.5pt; font-weight: 600; padding: 2pt 7pt; border-radius: 100px; }
+  .pill.clear { background: var(--clear-soft); color: var(--clear); }
+  .pill.flag { background: var(--flag-soft); color: var(--flag); }
+  .pill.accent { background: var(--accent-soft); color: var(--accent); }
+
+  /* stat row */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; margin: 4mm 0; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 4mm; background: var(--surface-2); }
+  .stat .v { font-family: -apple-system, "SF Pro Display", sans-serif; font-size: 21pt; font-weight: 700; letter-spacing: -0.02em; }
+  .stat .v.green { color: var(--clear); } .stat .v.teal { color: var(--accent); } .stat .v.amber { color: var(--flag); }
+  .stat .k { font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); margin-top: 1pt; }
+
+  .code { background: var(--ink-navy); border-radius: 8px; padding: 5mm 6mm; color: #d7dee5; font-family: "SF Mono", ui-monospace, monospace; font-size: 8pt; line-height: 1.55; white-space: pre-wrap; break-inside: avoid; }
+  .code .k { color: #7fb2d4; } .code .s { color: #b7cf9a; } .code .c { color: #6f7d89; } .code .r { color: #e0897d; } .code .g { color: #7fc8a0; }
+
+  ul.ticks { list-style: none; margin: 2mm 0; }
+  ul.ticks li { position: relative; padding-left: 6mm; margin-bottom: 2.5mm; color: var(--ink-soft); font-size: 9.4pt; }
+  ul.ticks li::before { content: ""; position: absolute; left: 0; top: 3.5pt; width: 3mm; height: 3mm; border-radius: 50%; background: var(--accent-soft); border: 1.5px solid var(--accent); }
+  ul.ticks li b { color: var(--ink); }
+
+  .divider { height: 1px; background: var(--line); margin: 5mm 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+  .note { font-size: 8.4pt; color: var(--ink-faint); font-style: italic; }
+  .hl { background: linear-gradient(transparent 60%, var(--accent-soft) 60%); font-weight: 600; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="page cover">
+  <div class="grid-bg"></div>
+  <div class="wm">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V3z" stroke="#fff" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    <div><div class="name">FlowCo</div><div class="sub">Approvals Triage</div></div>
+  </div>
+
+  <div class="mid">
+    <div class="eyebrow" style="color:#5fd3c7">Applied AI Product Leader · Take-home</div>
+    <h1 style="margin-top:5mm">The assistant does the<br>digging. The human<br><span class="accent">decides in seconds.</span></h1>
+    <div class="tag">A capability showcase — every requirement in the brief, mapped to a feature you can watch work on a live URL. Built around one honest idea: an AI that compresses <em style="color:#7fe0d4">investigation</em> into <em style="color:#7fe0d4">decision</em>, and is deliberately never given the decision itself.</div>
+  </div>
+
+  <div>
+    <div class="chips">
+      <span class="chip">Receipt vision</span><span class="chip">Line-item reconciliation</span>
+      <span class="chip">FX &amp; multi-currency</span><span class="chip">Duplicate discrimination</span>
+      <span class="chip">Policy judgment</span><span class="chip">Conversational submit</span>
+      <span class="chip">Code-enforced routing</span>
+    </div>
+    <div class="metas" style="margin-top:7mm">
+      <div><div class="k">Live prototype</div><div class="v"><a>flowco-two.vercel.app</a></div></div>
+      <div><div class="k">Source</div><div class="v"><a>github.com/rajdeepmondaldotcom/flowco</a></div></div>
+      <div><div class="k">Author</div><div class="v">Rajdeep Mondal</div></div>
+      <div><div class="k">Model</div><div class="v mono" style="font-size:9pt">claude-opus-4-8</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1. THESIS ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">01</span><span class="t">The idea, in one paragraph</span></div>
+  <h2>Approvals aren't slow because deciding is hard.<br>They're slow because of the digging.</h2>
+  <p class="lead" style="margin-top:4mm">Today a FlowCo approver does archaeology on every flagged expense: squint at a receipt, cross-reference a static policy doc, hunt a spreadsheet for duplicates, email the employee, wait, re-review. The click to approve is instant — everything before it is the cost.</p>
+  <p class="lead">So the assistant's job in this prototype is <strong>not to approve or reject</strong>. It investigates — reads the receipt, runs the policy math, reconciles the currency, compares the duplicates, drafts the follow-up — and lays the evidence in front of a human who then decides in seconds. Clean cases pool in a one-click lane; everything ambiguous arrives with the work already done and an explicit list of <em>what the assistant could not resolve</em>.</p>
+
+  <div class="callout">
+    <div class="label">The user story I built for — verbatim from the brief</div>
+    <p>"As a member of FlowCo's internal Approvals team, when the assistant can't resolve something — a policy exception, an ambiguous receipt, a possible duplicate — I want an AI-assisted way to triage and clear it fast, so I'm not manually digging through every flagged case."</p>
+  </div>
+
+  <h3 style="margin-top:4mm">What the live demo contains right now</h3>
+  <div class="stats">
+    <div class="stat"><div class="v num">31</div><div class="k">Expenses in the queue</div></div>
+    <div class="stat"><div class="v green num">8</div><div class="k">Auto-cleared (26%)</div></div>
+    <div class="stat"><div class="v amber num">23</div><div class="k">Routed to a human</div></div>
+    <div class="stat"><div class="v teal num">$85.15</div><div class="k">Non-reimbursable caught</div></div>
+  </div>
+  <p class="note">Every number above is live — produced by <span class="mono">claude-opus-4-8</span> reading real receipt images and PDFs, not hard-coded. The 23 flagged cases span every reason the brief names, plus edge cases only a model can judge. This document walks each one with a screenshot from that live run.</p>
+
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">01 / 15</span></div>
+</section>
+
+<!-- ============ 2. THE MANUAL WORKFLOW, AUTOMATED ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">02</span><span class="t">Understanding the brief</span></div>
+  <h2>Today's manual workflow, line by line — and what now does it for them</h2>
+  <p style="margin-top:3mm">The brief describes FlowCo's current reality: a seven-screen employee form and a seven-step manual review, unenforced by any system. Every one of those lines is a place the assistant now adds value. This is the map.</p>
+
+  <h3 style="margin-top:4mm; color:var(--accent)">The approver's seven manual steps →</h3>
+  <table>
+    <thead><tr><th style="width:44%">What happens today (from the brief)</th><th>What the assistant does now</th></tr></thead>
+    <tbody>
+      <tr><td>Gets an email with a link to the report</td><td>The expense arrives in a triage queue already investigated — no context-switch</td></tr>
+      <tr><td>Checks the amount against a static policy-cap doc — <strong>not enforced by any system</strong></td><td><span class="tag-cell">Deterministic</span> policy caps per category are enforced in code; over-cap is flagged before a human looks</td></tr>
+      <tr><td>Eyeballs the receipt image against the claimed amount</td><td><span class="tag-cell">Model</span> reads the receipt (photo <em>or</em> PDF), extracts the total, reconciles it to the claim, and reports legibility</td></tr>
+      <tr><td>Under $500 &amp; everything matches → one-click approve</td><td>These pool in a <strong>Ready-to-clear</strong> lane — approve the whole lane in one click</td></tr>
+      <tr><td>Anything off (wrong cost center, mismatch, missing receipt, over $1,000) → email the employee, wait, re-review</td><td>Each is a deterministic check <em>and</em> a pre-drafted, specific message to the employee — send in one click</td></tr>
+      <tr><td>Possible duplicate / policy exception → manually check a spreadsheet of past submissions</td><td><span class="tag-cell">Model</span> compares the candidate records and characterizes the duplicate; lays out per-person math for exceptions</td></tr>
+      <tr><td>Approved → payroll. Flagged → sits in the approver's personal queue</td><td>Every decision is one keystroke, fully audited, with Undo</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:5mm; color:var(--accent)">The employee's seven form screens → one sentence</h3>
+  <table>
+    <thead><tr><th style="width:44%">Screen the employee fills today</th><th>How the optional conversational submit handles it</th></tr></thead>
+    <tbody>
+      <tr><td>1 — Trip / purpose · linked cost center</td><td>Extracted from the sentence; cost center auto-picked from the employee's department</td></tr>
+      <tr><td>2 — Category (cap shown but not enforced)</td><td>Inferred from the merchant &amp; context; the cap is then enforced downstream</td></tr>
+      <tr><td>3 — Merchant, date, currency</td><td>Parsed, including relative dates ("last night") and currency</td></tr>
+      <tr><td>4 — Pre-tax amount, tax, tip</td><td>Split out where stated; left blank and flagged when not</td></tr>
+      <tr><td>5 — Receipt upload · <strong>OCR'd amount shown back to confirm</strong></td><td>The extracted draft is shown back for a one-tap confirm — exactly this pattern</td></tr>
+      <tr><td>6 — Cost center / GL from a long dropdown</td><td>Auto-selected; no dropdown hunting</td></tr>
+      <tr><td>7 — Review &amp; submit → notifies approver</td><td>One tap drops it into the approver's queue</td></tr>
+    </tbody>
+  </table>
+
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">02 / 15</span></div>
+</section>
+
+<!-- ============ 3. ARCHITECTURE ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">03</span><span class="t">How it's built</span></div>
+  <h2>Deterministic code for money and routing.<br>The model for reading and judgment.</h2>
+  <p style="margin-top:3mm">The single most important design decision: <strong>the model never decides who gets approved.</strong> Code computes the policy math and owns the routing; the model does the things only it can — read a crumpled receipt, find an alcohol line, reconcile a foreign currency, explain, and draft. Their outputs meet at a guardrail that can only ever make routing <em>stricter</em>.</p>
+
+  <div style="border:1px solid var(--line); border-radius:10px; padding:6mm; margin:3mm 0; background:var(--surface-2)">
+    <div class="two" style="gap:6mm">
+      <div>
+        <div class="eyebrow">Deterministic checks · pure code</div>
+        <ul class="ticks" style="margin-top:2mm">
+          <li><b>Policy caps</b> per category (meals $100, travel $500, lodging $250/nt, software $200, other $100)</li>
+          <li><b>Amount limits</b> — one-click under $500, always-review over $1,000</li>
+          <li><b>Duplicate detection</b> — same employee + merchant, same day or same amount within 3 days</li>
+          <li><b>Receipt presence</b> (required over $25), <b>cost-center</b> vs. department, <b>currency</b> mismatch</li>
+        </ul>
+      </div>
+      <div>
+        <div class="eyebrow" style="color:var(--flag)">Model · claude-opus-4-8 · vision</div>
+        <ul class="ticks" style="margin-top:2mm">
+          <li><b>Reads the receipt</b> — line items, handwriting, foreign taxes, photo or PDF</li>
+          <li><b>Finds non-reimbursables</b> code can't see — alcohol, personal items</li>
+          <li><b>Reconciles</b> FX, characterizes duplicates, checks category &amp; date</li>
+          <li><b>Enumerates its own uncertainty</b> and drafts the employee message</li>
+        </ul>
+      </div>
+    </div>
+    <div class="divider" style="margin:4mm 0"></div>
+    <div style="text-align:center">
+      <span class="pill accent" style="font-size:9pt; padding:4pt 12pt">The routing guardrail (code, not vibes)</span>
+      <p style="margin-top:3mm; color:var(--ink); font-size:9.6pt; max-width:150mm; margin-left:auto; margin-right:auto">
+        A case auto-clears <strong>only if</strong> every deterministic check passes <em>and</em> the model is confident <em>and</em> the receipt reconciles <em>and</em> there's no non-reimbursable line, no unverifiable FX, no mis-categorization, and no date discrepancy. The model can escalate to a human; it can never talk its way <em>out</em> of one.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--clear)">
+    <div class="label" style="color:var(--clear)">Why this split matters</div>
+    <p style="font-style:normal; font-size:9.6pt">The clearest proof is the alcohol case: <strong>a "no alcohol" rule is impossible in code</strong> — nothing in the structured claim says what was ordered. So it is entirely the model's job. But the model doesn't get to approve around it: the guardrail refuses to auto-clear any receipt where the model reports a non-reimbursable line. Code owns the <em>consequence</em>; the model owns the <em>perception</em>.</p>
+  </div>
+
+  <h3 style="margin-top:2mm">Stack</h3>
+  <p style="font-size:9.2pt">Next.js (App Router) · React · Tailwind · <span class="mono">@anthropic-ai/sdk</span> with schema-constrained structured outputs (zod) + adaptive thinking · Supabase (Postgres + Storage) in production, in-memory locally · deployed on Vercel with hourly model-call cost caps and vision-sized timeouts.</p>
+
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">03 / 15</span></div>
+</section>
+
+<!-- ============ 4. HAPPY PATH ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">04</span><span class="t">The happy path</span></div>
+  <h2>Run the assistant, and the queue sorts itself</h2>
+  <p style="margin-top:3mm">One click on <strong>Run assistant triage</strong>: deterministic checks run in code, then the model reads every receipt. Thirty-one submissions resolve into two lanes — the clean ones ready to clear together, the rest arriving with the investigation done.</p>
+  <figure style="margin-top:3mm">
+    <div class="shot"><img src="showcase-assets/queue-hero-light.png" alt="Triage queue" /></div>
+    <figcaption><b>The approver's queue after triage.</b> Eight expenses auto-cleared (a third of the queue) — including one with <b>no receipt at all</b> (parking under the $25 threshold, so policy doesn't require one) and one whose receipt is a <b>PDF, not a photo</b>. The headline metric — <b>$85.15 recovered</b> — is money the assistant caught that policy says shouldn't be reimbursed. Filter chips count every flag reason at a glance.</figcaption>
+  </figure>
+  <div class="two" style="margin-top:5mm">
+    <div>
+      <h3>The lane <em>is</em> the product</h3>
+      <p style="font-size:9.2pt">Auto-clear is earned, not assumed. A case only reaches the green lane when the whole guardrail is satisfied. That's what makes one-click safe: the approver trusts the lane because a model verdict alone can't put anything in it.</p>
+    </div>
+    <div>
+      <h3>Nothing is hidden</h3>
+      <p style="font-size:9.2pt">Every flagged case leads with the assistant's one-line rationale and its <em>unresolved</em> list. The approver reads a conclusion, not a data dump — and can always open the full evidence, receipt, and deterministic checks.</p>
+    </div>
+  </div>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">04 / 15</span></div>
+</section>
+
+<!-- ============ 5. SIGNATURE CASE ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">05</span><span class="t">The signature capability</span></div>
+  <h2>Reading a real receipt for something no field can hold</h2>
+  <p style="margin-top:3mm">This is the case that convinced me the model earns its place. A real, crumpled phone photo of a ₹16,823 team dinner in Goa — in rupees, with local GST/VAT. Deterministic checks flag that it's over the meals cap and in a foreign currency. But the thing that actually matters is invisible to code.</p>
+  <div class="feature" style="margin-top:2mm">
+    <figure>
+      <div class="shot"><img src="showcase-assets/case-alcohol.png" alt="Alcohol reconciliation case" /></div>
+    </figure>
+    <div>
+      <h3>One line, ₹935, that changes the payout</h3>
+      <p style="font-size:9.4pt">The receipt contains a single alcohol line — "Goan Mudslide (Absolut)". <strong>Nothing in the structured claim says "alcohol."</strong> Only reading the receipt reveals it. The assistant:</p>
+      <ul class="ticks" style="margin-top:1mm">
+        <li>identifies the ₹935 cocktail and its attributable 22% VAT (₹205.70)</li>
+        <li>reconciles the ₹16,823 total to the $201.50 claim at ~83.5 INR/USD</li>
+        <li>notices the receipt is marked "Duplicate" — a <em>reprint</em>, not a second submission</li>
+        <li>hands the approver the exact reimbursable: <strong>$187.84</strong></li>
+      </ul>
+      <p style="font-size:9.4pt; margin-top:2mm">Then it stops. The dinner is still over the $100 meals cap — a policy exception that's <em>the approver's</em> call, with the documented team-offsite purpose laid out. The model prepared the decision; it didn't make it.</p>
+      <div style="margin-top:3mm"><span class="pill flag">policy exception</span> <span class="pill flag">ambiguous receipt</span> <span class="pill flag">foreign currency</span></div>
+      <p class="note" style="margin-top:2mm">The three flag reasons the brief names — in one real receipt.</p>
+    </div>
+  </div>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">05 / 15</span></div>
+</section>
+
+<!-- ============ 6. CAPABILITIES GALLERY A ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">06</span><span class="t">Capabilities · reading &amp; reconciling</span></div>
+  <h2>Money that has to come off — and honesty when it can't be read</h2>
+  <div class="cards" style="margin-top:3mm">
+    <figure class="card">
+      <div class="shot crop" style="height:88mm"><img src="showcase-assets/case-personal-item.png" alt="Personal item"/></div>
+      <div class="tags">EXP-1024 · non-reimbursable</div>
+      <h3>A personal item on a hotel folio</h3>
+      <p>A $18.99 in-room movie buried in an otherwise-valid $214 Marriott folio. The model deducts it and its tax, and reconciles the reimbursable to <b>$195.01</b> — a ledger the approver reads in one glance.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:88mm"><img src="showcase-assets/case-illegible.png" alt="Illegible receipt"/></div>
+      <div class="tags">EXP-1026 · vision honesty</div>
+      <h3>A receipt it can't fully read</h3>
+      <p>A faded taxi receipt. The model reconciles the line items but flags the smudged printed total as unreadable — <b>"$3#.##, cannot be read digit-for-digit"</b> — instead of guessing. Refusing to invent a number <em>is</em> the feature.</p>
+    </figure>
+  </div>
+  <div class="callout" style="margin-top:5mm">
+    <div class="label">The through-line</div>
+    <p style="font-style:normal; font-size:9.6pt">Both cases turn on the same principle: <strong>when money must move or a number is uncertain, a human confirms it.</strong> The assistant's job is to make that confirmation take five seconds — here is the amount to deduct; here is exactly what I couldn't read — not to make the call itself.</p>
+  </div>
+  <p style="margin-top:3mm; font-size:9.4pt">Reconciliation is the signature interaction of the whole product. Whenever money comes off — alcohol, a personal item, an FX gap — the evidence panel shows a <strong>Claimed → deductions → Reimburse</strong> ledger, so the approver sees the corrected amount and approves <em>that</em>, not the claimed total.</p>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">06 / 15</span></div>
+</section>
+
+<!-- ============ 7. CAPABILITIES GALLERY B — judgment ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">07</span><span class="t">Capabilities · judgment a rules engine can't make</span></div>
+  <h2>Intent, not just arithmetic</h2>
+  <p style="margin-top:2mm; font-size:9.6pt">Deterministic checks catch what's <em>measurably</em> wrong. These four cases are wrong in ways only reading and reasoning can surface — and each still routes to a human, because judgment about intent is the approver's to confirm.</p>
+  <div class="cards" style="margin-top:3mm">
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-category.png" alt="Category gaming"/></div>
+      <div class="tags">EXP-1023 · mis-categorization</div>
+      <h3>A meal disguised as travel</h3>
+      <p>A $185 steakhouse dinner filed as <b>travel</b> (cap $500) instead of <b>meals</b> (cap $100). The model flags the category that doesn't fit the merchant and names the cap it dodges.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-split-evasive.png" alt="Evasive split"/></div>
+      <div class="tags">EXP-1027/1028 · cap avoidance</div>
+      <h3>One dinner, split to duck the cap</h3>
+      <p>Two checks — $94 and $92 — same table, same card, five minutes apart. The model reassembles the <b>$186</b> dinner and flags it as a deliberate split to keep each half under the $100 cap.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-tip.png" alt="Double tip"/></div>
+      <div class="tags">EXP-1031 · double gratuity</div>
+      <h3>Tipped twice</h3>
+      <p>An 18% service charge already included, plus a $12 tip written on top. The model catches the double gratuity — and correctly notes the "N/A cocktails" are non-alcoholic, so it doesn't false-flag them.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-date.png" alt="Date mismatch"/></div>
+      <div class="tags">EXP-1030 · date reconciliation</div>
+      <h3>A receipt dated wrong</h3>
+      <p>The receipt reads Jul 2; the claim says Jul 6. Amounts match perfectly, so nothing else trips — but the model flags the 4-day gap, and a code guardrail makes sure a date mismatch never auto-clears.</p>
+    </figure>
+  </div>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">07 / 15</span></div>
+</section>
+
+<!-- ============ 8. DUPLICATE CONTRAST ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">08</span><span class="t">Capabilities · the duplicate, told as a contrast</span></div>
+  <h2>Telling a real double-submission from a coincidence</h2>
+  <p style="margin-top:2mm; font-size:9.6pt">"Possible duplicate" is one of the three cases the brief names. The deterministic check flags <em>candidates</em> — same employee, same merchant, close in time. The hard part, and the model's real job, is saying <strong>which kind</strong> each one is. The same capability, shown discriminating:</p>
+  <div class="two" style="margin-top:3mm; gap:8mm">
+    <figure>
+      <div class="shot crop" style="height:112mm"><img src="showcase-assets/case-duplicate-true.png" alt="True double submission"/></div>
+      <figcaption><span class="pill danger" style="background:var(--danger-soft);color:var(--danger)">reject one</span> &nbsp;<b>A genuine double-submission.</b> Same $20 Notion seat, same day, the <b>same receipt</b> attached twice. The model's call: "approve one, reject the other." Money FlowCo would otherwise pay twice.</figcaption>
+    </figure>
+    <figure>
+      <div class="shot crop" style="height:112mm"><img src="showcase-assets/case-duplicate-legit.png" alt="Legit split"/></div>
+      <figcaption><span class="pill clear">approve both</span> &nbsp;<b>A coincidence that looks identical to code.</b> Two Goa breakfast bills, same table and 14:07 timestamp — but different items and consecutive bill numbers. A legitimate split of one group meal. The model clears the suspicion.</figcaption>
+    </figure>
+  </div>
+  <div class="callout" style="margin-top:4mm">
+    <div class="label">Why this is the depth of it</div>
+    <p style="font-style:normal; font-size:9.6pt">A spreadsheet lookup flags <em>both</em> of these — and a naive assistant would either reject both or approve both. Telling them apart requires reading the two receipts and reasoning about what actually happened. That discrimination, not the flagging, is where the model earns its keep.</p>
+  </div>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">08 / 15</span></div>
+</section>
+
+<!-- ============ 9. CAPABILITIES — formats & metadata ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">09</span><span class="t">Capabilities · currency, formats &amp; the deterministic backbone</span></div>
+  <h2>Every other reason an approver stops and digs</h2>
+  <div class="cards" style="margin-top:3mm">
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-fx-overclaim.png" alt="FX over-claim"/></div>
+      <div class="tags">EXP-1029 · foreign currency</div>
+      <h3>A conversion that doesn't add up</h3>
+      <p>A £140 London hotel claimed as <b>$235</b> — an implied 1.68 GBP→USD rate the model calls implausible ("should be ~$178"). FX can reveal an over-claim invisible in the raw numbers.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-pdf.png" alt="PDF invoice"/></div>
+      <div class="tags">EXP-1025 · photo <em>or</em> PDF</div>
+      <h3>A PDF invoice, not a photo</h3>
+      <p>The brief's form says "Photo <b>or PDF</b> upload." A real Canva <span class="mono">.pdf</span> invoice, read natively as a document block, reconciled, and auto-cleared — proof the ingestion isn't image-only.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-missing-receipt.png" alt="Missing receipt"/></div>
+      <div class="tags">EXP-1018 · missing receipt</div>
+      <h3>No receipt where one is required</h3>
+      <p>A $63 lunch with no receipt attached — required over $25. Flagged deterministically, with a specific drafted ask to the employee ready to send.</p>
+    </figure>
+    <figure class="card">
+      <div class="shot crop" style="height:60mm"><img src="showcase-assets/case-cost-center.png" alt="Cost center"/></div>
+      <div class="tags">EXP-1017 · wrong GL code</div>
+      <h3>Coded to the wrong cost center</h3>
+      <p>A Marketing expense booked to Engineering's cost center — the "long dropdown" mis-pick from the brief. Caught by mapping each department to its GL code.</p>
+    </figure>
+  </div>
+  <p style="margin-top:4mm; font-size:9.2pt">Not shown, also covered: <b>over $1,000</b> always routes to manager review (EXP-1019), and <b>over $500</b> is beyond the one-click lane (EXP-1020) — both enforced in code regardless of how clean the receipt looks.</p>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">09 / 15</span></div>
+</section>
+
+<!-- ============ 10. COVERAGE MATRIX ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">10</span><span class="t">Proof of coverage</span></div>
+  <h2>Every flag reason in the brief → a check, a live case, a screenshot</h2>
+  <p style="margin-top:2mm; font-size:9.4pt">Nothing here is claimed without a case you can open on the live URL. This is the whole surface, on one page.</p>
+  <table style="margin-top:3mm; font-size:8.4pt">
+    <thead><tr><th>Reason an approver stops</th><th>Enforced by</th><th>Live case</th><th>Outcome</th></tr></thead>
+    <tbody>
+      <tr><td>Amount over policy cap (unenforced today)</td><td class="tag-cell">code</td><td>EXP-1009 Capital Grille</td><td>flagged over meals cap</td></tr>
+      <tr><td>Receipt ≠ claimed amount</td><td class="tag-cell">model</td><td>EXP-1008 handwritten tip</td><td>gray-zone → human</td></tr>
+      <tr><td>Missing receipt (required &gt; $25)</td><td class="tag-cell">code</td><td>EXP-1018</td><td>flagged, message drafted</td></tr>
+      <tr><td>Wrong cost center / GL code</td><td class="tag-cell">code</td><td>EXP-1017</td><td>dept ≠ GL, flagged</td></tr>
+      <tr><td>Over $1,000 → manager review</td><td class="tag-cell">code</td><td>EXP-1019 flight</td><td>always to human</td></tr>
+      <tr><td>Over $500 → beyond one-click</td><td class="tag-cell">code</td><td>EXP-1020 conference</td><td>routed to review</td></tr>
+      <tr><td>Possible duplicate (real)</td><td class="tag-cell">code + model</td><td>EXP-1021/1022 Notion</td><td>reject the duplicate</td></tr>
+      <tr><td>Possible duplicate (legit split)</td><td class="tag-cell">code + model</td><td>EXP-1014/1015 Artjuna</td><td>approve both</td></tr>
+      <tr><td>Cap-avoidance split</td><td class="tag-cell">model</td><td>EXP-1027/1028 steakhouse</td><td>one dinner, flagged</td></tr>
+      <tr><td>Policy exception (discretion)</td><td class="tag-cell">code + model</td><td>EXP-1013 alcohol dinner</td><td>evidence for approver</td></tr>
+      <tr><td>Non-reimbursable: alcohol</td><td class="tag-cell">model</td><td>EXP-1013 Goa</td><td>deducted → $187.84</td></tr>
+      <tr><td>Non-reimbursable: personal item</td><td class="tag-cell">model</td><td>EXP-1024 hotel movie</td><td>deducted → $195.01</td></tr>
+      <tr><td>Mis-categorization to dodge a cap</td><td class="tag-cell">model</td><td>EXP-1023 steakhouse</td><td>category flagged</td></tr>
+      <tr><td>Ambiguous / illegible receipt</td><td class="tag-cell">model</td><td>EXP-1026 faded taxi</td><td>honest "can't read total"</td></tr>
+      <tr><td>Foreign currency (rate unverifiable)</td><td class="tag-cell">code + model</td><td>EXP-1012 EUR, 1013 INR</td><td>FX reconciled → human</td></tr>
+      <tr><td>Foreign-currency over-claim</td><td class="tag-cell">model</td><td>EXP-1029 GBP hotel</td><td>implausible rate flagged</td></tr>
+      <tr><td>Receipt date ≠ claimed date</td><td class="tag-cell">model + guardrail</td><td>EXP-1030 Tender Greens</td><td>date gap → human</td></tr>
+      <tr><td>Double gratuity</td><td class="tag-cell">model</td><td>EXP-1031 service + tip</td><td>flagged to confirm</td></tr>
+      <tr><td>Receipt is a PDF, not a photo</td><td class="tag-cell">model</td><td>EXP-1025 Canva</td><td>read &amp; cleared</td></tr>
+      <tr><td>Clean &amp; under $500 → one-click</td><td class="tag-cell">code + model</td><td>EXP-1001–1007</td><td>auto-clear lane</td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">10 / 15</span></div>
+</section>
+
+<!-- ============ 11. FAILURE STORY ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">11</span><span class="t">Where the model got it wrong — the part they care about most</span></div>
+  <h2>The honest bit: a capable model, given the decision, became an unpredictable decider</h2>
+  <p style="margin-top:2mm; font-size:9.4pt">Before any of the structure above, I built the naive version — one prompt, the receipt, "extract the total and decide." I designed a trap: a receipt supporting $84.50 with a claim of $85.00, a fifty-cent gray-zone overclaim — exactly what triage exists to catch. I expected the model to <em>misread</em> the handwriting. It didn't: four of four correct reads. Perception wasn't the weak point. This was:</p>
+  <div class="code" style="margin-top:2mm">
+<span class="c">// same receipt ($84.50), same claim ($85.00), three identical runs — verbatim</span>
+Run 1 → <span class="k">"decision"</span>: <span class="s">"flag_for_review"</span>   <span class="c">// correct</span>
+Run 2 → <span class="k">"decision"</span>: <span class="r">"approved"</span>        <span class="c">// "approve at $84.50 rather than the claimed $85.00"</span>
+Run 3 → <span class="k">"decision"</span>: <span class="r">"approve"</span>         <span class="c">// "approve for $84.50 ... or request clarification"</span></div>
+  <p style="margin-top:3mm; font-size:9.4pt">Three failures in one probe: it <strong>flipped its decision</strong> on identical input (a coin flip in exactly the gray zone triage is <em>for</em>); it <strong>invented an authority</strong> — "approve at the corrected amount," a partial-reimbursement action the product doesn't have; and its output <strong>drifted shape</strong> run to run (<span class="mono">approve</span> vs <span class="mono">approved</span>, number vs string), which breaks any queue built on top.</p>
+
+  <h3 style="margin-top:3mm">Each failure became a design rule</h3>
+  <table style="font-size:8.6pt">
+    <thead><tr><th style="width:42%">What the naive model did</th><th>What changed in the shipped engine</th></tr></thead>
+    <tbody>
+      <tr><td>Gray-zone routing was a coin flip</td><td><strong>Routing is code.</strong> Any mismatch, failed check, or sub-0.8 confidence → human, 100% of the time. The model can only make routing stricter.</td></tr>
+      <tr><td>Invented "approve at the corrected amount"</td><td><strong>Recommendations are a schema enum</strong> of actions that exist (approve / reject / request_info). The human holds the only approve button on flagged cases.</td></tr>
+      <tr><td>Output shape drifted between runs</td><td><strong>Structured outputs + zod</strong> validate every verdict. No fences, no type flips.</td></tr>
+      <tr><td>Uncertainty buried in prose</td><td><strong><span class="mono">unresolved[]</span> is a required field.</strong> The model must enumerate what it couldn't resolve — and the UI leads with it.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout" style="margin-top:3mm; border-left-color:var(--flag)">
+    <div class="label" style="color:var(--flag)">The lesson</div>
+    <p style="font-style:normal; font-size:9.8pt">The applied-AI work here wasn't perception — the model reads receipts better than I do. It was <strong>decision rights and output discipline</strong>: a capable model given decision authority becomes an unpredictable decision-maker in exactly the ambiguous cases where the decision matters most. So code decides <em>who decides</em>; the model does what it's uniquely good at.</p>
+  </div>
+  <p class="note" style="margin-top:2mm">That same $85.00 case is EXP-1008 in the live app today — it routes to a human every time, with the $0.50 delta called out and the clarification drafted. The fix, live.</p>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">11 / 15</span></div>
+</section>
+
+<!-- ============ 12. EMPLOYEE SIDE ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">12</span><span class="t">The optional employee side</span></div>
+  <h2>Seven screens, replaced by one sentence</h2>
+  <p style="margin-top:2mm; font-size:9.6pt">The brief's optional stretch: <em>"submit an expense by describing it conversationally instead of filling out seven screens, so I can do it in under a minute from my phone."</em> The same extraction engine that powers triage runs the employee side too.</p>
+  <div class="two" style="margin-top:3mm; gap:6mm">
+    <figure>
+      <div class="shot"><img src="showcase-assets/submit-describe.png" alt="Describe step"/></div>
+      <figcaption><b>1 · Describe.</b> One sentence, like you'd tell a coworker — or tap an example. A receipt photo is optional.</figcaption>
+    </figure>
+    <figure>
+      <div class="shot"><img src="showcase-assets/submit-review.png" alt="Review step"/></div>
+      <figcaption><b>2 · Confirm.</b> The model fills every field — merchant, category, amount, currency, cost center, and a resolved date — and <b>shows the draft back</b> (the brief's "OCR'd amount shown back"), with an explicit <b>Still missing</b> list.</figcaption>
+    </figure>
+  </div>
+  <div class="two" style="margin-top:4mm; gap:6mm; align-items:center">
+    <figure>
+      <div class="shot"><img src="showcase-assets/submit-success.png" alt="Submitted"/></div>
+    </figure>
+    <div>
+      <h3>3 · Sent — under a minute, from a phone</h3>
+      <p style="font-size:9.4pt">One tap drops it into the approver's queue, where triage runs automatically. The whole flow — verified on a 375&#8239;px viewport — is a sentence, a confirm, and a tap.</p>
+      <p style="font-size:9.4pt"><strong>One engine, two surfaces.</strong> The employee's conversational extraction and the approver's receipt reconciliation are the same code path — which is exactly why building the optional side was worth it: it proves the engine generalizes.</p>
+    </div>
+  </div>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">12 / 15</span></div>
+</section>
+
+<!-- ============ 13. DESIGN ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">13</span><span class="t">Design &amp; craft</span></div>
+  <h2>Designed as a calm financial console — "The Reconciliation Desk"</h2>
+  <p style="margin-top:2mm; font-size:9.6pt">The interface is built to not make you think: a precise reconciliation tool, not generic SaaS. Netchex-native slate ink, a teal accent, a warm paper canvas, and Apple SF Pro with tabular numerals on every amount — the treatment Apple uses in Wallet and Numbers.</p>
+  <div class="two" style="margin-top:3mm; gap:6mm">
+    <figure>
+      <div class="shot"><img src="showcase-assets/queue-hero-light.png" alt="Light mode"/></div>
+      <figcaption><b>Light.</b> Warm paper, tabular figures, the reconciliation ledger as the signature element.</figcaption>
+    </figure>
+    <figure>
+      <div class="shot"><img src="showcase-assets/queue-hero-dark.png" alt="Dark mode"/></div>
+      <figcaption><b>Dark.</b> A full no-flash dark mode that respects the system and a manual toggle — same information architecture.</figcaption>
+    </figure>
+  </div>
+  <div class="two" style="margin-top:4mm; gap:8mm">
+    <div>
+      <h3>Built against the Laws of UX</h3>
+      <ul class="ticks">
+        <li><b>Recognition over recall</b> — a first-run guide, plain-English tooltips on every flag, a <span class="mono">?</span> shortcut overlay</li>
+        <li><b>Flow &amp; Fitts</b> — a sticky always-reachable decide bar, auto-advance, full keyboard nav (<span class="mono">j/k/a/r</span>)</li>
+        <li><b>Doherty</b> — skeletons, a live triage progress bar, a count-up on "$ recovered"</li>
+        <li><b>User control</b> — every decision raises a toast with real <b>Undo</b>; nothing is a dead end</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Demo-ready by design</h3>
+      <ul class="ticks">
+        <li><b>Reset demo</b> — a one-click, confirmed reset returns the queue to its 31-case starting point so anyone can run it from the top</li>
+        <li><b>Mobile</b> — the employee submit and the case-review panel are fully phone-usable</li>
+        <li><b>Peak-End</b> — an "all caught up" inbox-zero and a warm "sent to approvals" success</li>
+        <li><b>Honest states</b> — a clearly-labeled mock mode when no API key is present</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">13 / 15</span></div>
+</section>
+
+<!-- ============ 14. PRODUCTION ============ -->
+<section class="page">
+  <div class="kicker"><span class="n">14</span><span class="t">Production engineering</span></div>
+  <h2>Rough-prototype brief, production-grade seams</h2>
+  <p style="margin-top:2mm; font-size:9.6pt">The brief said a rough prototype is fine. It is a prototype — but the seams that a public, AI-backed demo actually needs are real, because those seams are where an applied-AI product lives or dies.</p>
+  <div class="two" style="margin-top:3mm; gap:8mm">
+    <div>
+      <h3>Cost &amp; safety</h3>
+      <ul class="ticks">
+        <li><b>Hourly model-call caps</b> — an atomic SQL counter so an unattended public URL can't burn the API budget; a friendly 429 when spent</li>
+        <li><b>Vision-sized timeouts</b> — Opus reading a receipt with thinking is a 10–30s call; routes are sized for it</li>
+        <li><b>Fail-safe receipts</b> — a receipt that won't load never crashes triage; it routes to a human as unverified</li>
+      </ul>
+    </div>
+    <div>
+      <h3>State &amp; deploy</h3>
+      <ul class="ticks">
+        <li><b>Supabase</b> in production (Postgres for state, Storage for uploads); in-memory locally — chosen by env vars</li>
+        <li><b>Every AI action audited</b> — an append-only trail on each expense; decisions carry Undo</li>
+        <li><b>Deployed on Vercel</b>, receipts traced into the lambda, one-command redeploy</li>
+      </ul>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <h3>What I'd measure in production</h3>
+  <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat"><div class="v teal" style="font-size:13pt; line-height:1.3">% auto-cleared<br>&amp; time-to-decision</div><div class="k">The core value</div></div>
+    <div class="stat"><div class="v teal" style="font-size:13pt; line-height:1.3">Re-review<br>loop rate</div><div class="k">Do drafted asks resolve in one round-trip</div></div>
+    <div class="stat"><div class="v teal" style="font-size:13pt; line-height:1.3">False-approve<br>rate</div><div class="k">The guardrail metric — this is payroll money</div></div>
+  </div>
+  <h3 style="margin-top:3mm">What I deliberately dropped, and what's next</h3>
+  <p style="font-size:9.2pt"><strong>Dropped, on purpose:</strong> auth, real email/Slack sends, a payroll write-back, and a mobile approver <em>queue</em> — none change whether the triage judgment is right, so depth went to the receipt reading, the ledger, and the guardrail instead. <strong>Next:</strong> a feedback loop from approver overrides back into the prompts (every override is a labeled signal), real sends behind the drafted messages, and a policy editor so Finance changes caps without a deploy.</p>
+  <div class="foot"><span>FlowCo · Approvals Triage — Capability Showcase</span><span class="mono">14 / 15</span></div>
+</section>
+
+<!-- ============ 15. CLOSING ============ -->
+<section class="page" style="background:var(--ink-navy); color:#e7edf1;">
+  <div class="kicker"><span class="n" style="background:#17998f">15</span><span class="t" style="color:#8fa0ad">In one line</span></div>
+  <h2 style="color:#fff; font-size:26pt; max-width:160mm; line-height:1.12">The assistant compresses digging into deciding — and is deliberately never handed the decision itself.</h2>
+  <p style="color:#b9c6d1; margin-top:5mm; font-size:11pt; max-width:165mm">That single constraint is what makes the auto-clear lane trustworthy, the reconciliation ledger honest, and the failure story fixable. Everything in this document — thirty-one live cases, every flag reason the brief names, the receipt vision, the FX math, the duplicate discrimination, the conversational submit — sits on top of it.</p>
+
+  <div style="margin-top:auto; display:grid; grid-template-columns:1fr 1fr; gap:8mm; border-top:1px solid rgba(255,255,255,0.14); padding-top:7mm">
+    <div>
+      <div style="font-size:7.5pt; letter-spacing:0.14em; text-transform:uppercase; color:#7f909d; margin-bottom:2mm">See it live</div>
+      <div style="font-size:12pt; color:#fff; margin-bottom:2pt">flowco-two.vercel.app</div>
+      <div style="font-size:9pt; color:#8fa0ad">Click <b style="color:#cdd8e0">Run assistant triage</b>, then open <b style="color:#cdd8e0">EXP-1013</b>. Use <b style="color:#cdd8e0">Reset demo</b> to start over.</div>
+    </div>
+    <div>
+      <div style="font-size:7.5pt; letter-spacing:0.14em; text-transform:uppercase; color:#7f909d; margin-bottom:2mm">Read the build</div>
+      <div style="font-size:12pt; color:#fff; margin-bottom:2pt">github.com/rajdeepmondaldotcom/flowco</div>
+      <div style="font-size:9pt; color:#8fa0ad">The triage engine, the guardrail, and the verbatim failure-story probes are all in the repo.</div>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:9pt; margin-top:8mm">
+    <div style="width:26pt; height:26pt; border-radius:7pt; background:linear-gradient(135deg,#17998f,#0c6e6b); display:flex; align-items:center; justify-content:center"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M6 3h9l3 3v15H6V3z" stroke="#fff" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    <div><div style="font-family:-apple-system,'SF Pro Display',sans-serif; font-weight:700; font-size:12pt; color:#fff">FlowCo · Approvals Triage</div><div style="font-size:8.5pt; color:#7f909d">Rajdeep Mondal · Applied AI Product Leader take-home · July 2026</div></div>
+  </div>
+</section>
+
+</body>
+</html>
