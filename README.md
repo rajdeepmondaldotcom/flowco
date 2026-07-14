@@ -1,28 +1,30 @@
 # FlowCo · Approvals Triage
 
-Prototype for the Netchex Applied AI take-home. One thing, built deeply: **an AI-assisted triage queue for expense approvals** — the assistant does the investigation, the human makes the decision.
+Prototype for the Netchex Applied AI take-home. One thing, built deeply: **an AI-assisted triage queue for expense approvals**. The assistant does the investigation, the human makes the decision.
 
-**Live demo:** https://flowco-two.vercel.app — click **Run assistant triage** and watch the queue sort itself. Open **EXP-1013 (The Cape Goa)** for the showpiece: a real ₹16,823 team-dinner receipt where the assistant finds an alcohol line policy says isn't reimbursable, deducts it plus its VAT, and hands the approver the exact reimbursable amount. (`/submit` is the optional employee side.) **Reset demo** returns the queue to its 38-case starting point so anyone can run it from the top.
+**Live demo:** https://flowco-two.vercel.app. Click **Run assistant triage** and watch the queue sort itself. Open **EXP-1013 (The Cape Goa)** for the showpiece: a real ₹16,823 team-dinner receipt where the assistant finds an alcohol line policy says isn't reimbursable, deducts it plus its VAT, and hands the approver the exact reimbursable amount. (`/submit` is the optional employee side.) **Reset demo** returns the queue to its 38-case starting point so anyone can run it from the top.
 
-FlowCo is an India-based team: people pay in rupees (some in SGD/GBP/EUR) and get reimbursed in USD, so the assistant **auto-converts every foreign receipt** at a reference rate and shows the local amount next to the converted dollars. It also catches uploads that **aren't receipts at all** (a conference poster, a personal book) instead of inventing an amount.
+FlowCo is an India-based team: people pay in rupees (some in SGD) and get reimbursed in USD, so the assistant **auto-converts every foreign receipt** at a reference rate and shows the local amount next to the converted dollars. It also catches uploads that **aren't receipts at all** (a conference poster, a personal book) instead of inventing an amount.
 
-**📄 Capability showcase (PDF):** [`docs/FlowCo-Approvals-Triage-Showcase.pdf`](docs/FlowCo-Approvals-Triage-Showcase.pdf) — a 16-page walkthrough mapping every requirement in the brief to a working, screenshotted feature, including the failure story. Regenerate it with `node scripts/capture-showcase.mjs && node scripts/render-showcase-pdf.mjs`.
+**📄 Capability showcase (PDF):** [`docs/FlowCo-Approvals-Triage-Showcase.pdf`](docs/FlowCo-Approvals-Triage-Showcase.pdf), a 16-page walkthrough mapping every requirement in the brief to a working, screenshotted feature, including the failure story. Regenerate it with `node scripts/capture-showcase.mjs && node scripts/render-showcase-pdf.mjs`.
 
 ## The product idea in one paragraph
 
-Today FlowCo's approver does archaeology on every flagged expense: squint at a receipt, cross-reference a policy doc, search a spreadsheet for duplicates, email the employee, wait, re-review. The AI's job here is **not to approve or reject** — it's to compress "digging" into "deciding." Every expense arrives with the investigation already done: receipt read (including handwritten tips and alcohol lines), policy math computed, foreign currency reconciled, duplicates compared, and a drafted message to the employee when something's missing. Clean cases pool in a one-click lane; ambiguous cases arrive with the evidence laid out and an explicit list of *what the assistant could not resolve*.
+Today FlowCo's approver does archaeology on every flagged expense: squint at a receipt, cross-reference a policy doc, search a spreadsheet for duplicates, email the employee, wait, re-review. The AI's job here is **not to approve or reject**. It compresses "digging" into "deciding." Every expense arrives with the investigation already done: receipt read (including handwritten tips and alcohol lines), policy math computed, foreign currency reconciled, duplicates compared, and a drafted message to the employee when something's missing. Clean cases pool in a one-click lane; ambiguous cases arrive with the evidence laid out and an explicit list of *what the assistant could not resolve*.
 
 ## Real receipts, real edge cases
 
-The hard cases in the demo are **real receipts** — crumpled, shadowed phone photos from an actual team offsite in Goa, in rupees with local GST/VAT. They are what convinced me the model earns its place, because each one hits a triage category a rules engine cannot:
+The hard cases in the demo are **real receipts**: crumpled, shadowed phone photos from an actual team offsite in Goa, in rupees with local GST/VAT. They are what convinced me the model earns its place, because each one hits a triage category a rules engine cannot:
 
 | Case | Receipt | Why only the model can catch it |
 |---|---|---|
-| **The Cape Goa** (EXP-1013) | ₹16,823 team dinner | Contains one alcohol line ("Goan Mudslide (Absolut)", ₹935 + its own 22% VAT). **No structured field says "alcohol"** — only reading the receipt reveals it. The assistant deducts ₹1,140.70 and reports the reimbursable **$187.84**. |
-| **Artjuna** (EXP-1014/1015) | Two consecutive bills | Same table, same 14:07 timestamp, same cashier, different items — a legitimate **split of one big group breakfast**, not a double-submission. The assistant compares them and says so. |
-| **Padaria** (EXP-1016) | ₹1,080 bakery pickup | Clean and itemized; the assistant recommends approve and flags only the one thing code can't verify — the **INR→USD rate**. |
+| **The Cape Goa** (EXP-1013) | ₹16,823 team dinner | Contains one alcohol line ("Goan Mudslide (Absolut)", ₹935 + its own 22% VAT). **No structured field says "alcohol"**; only reading the receipt reveals it. The assistant deducts ₹1,140.70 and reports the reimbursable amount, about **$163.88**. |
+| **Artjuna** (EXP-1014/1015) | Two consecutive bills | Same table, same 14:07 timestamp, same cashier, different items: a legitimate **split of one big group breakfast**, not a double-submission. The assistant compares them and says so. |
+| **Padaria** (EXP-1016) | ₹1,080 bakery pickup | Clean and itemized; the assistant recommends approve and flags only the one thing code can't verify, the **INR→USD rate**. |
 
-The clean domestic (USD) receipts auto-clear; the real foreign receipts with alcohol/splits get the full investigation and route to a human. That split is the product.
+There is a fourth real one on the employee side: a **fully handwritten bill** (DANYA ENTERPRISES, Bangalore, hand-circled total ₹5,196) you can upload at `/submit`; the assistant reads the merchant off the letterhead and the circled total off the handwriting, names the digits it is unsure about instead of bluffing, and converts to about $54.30.
+
+The clean everyday receipts auto-clear; the real offsite receipts with alcohol and split bills get the full investigation and route to a human. That split is the product.
 
 ## Every flag reason in the PDF, covered
 
@@ -30,31 +32,31 @@ The PDF's manual workflow lists exactly what makes an approver stop and dig. Eac
 
 | PDF flag reason | Check (code) | Seed case that exercises it |
 |---|---|---|
-| Amount vs. policy cap not enforced | `policyCap` | EXP-1009 Capital Grille over meals cap |
+| Amount vs. policy cap not enforced | `policyCap` | EXP-1009 Farzi Cafe client dinner over the meals cap |
 | Receipt doesn't match claimed amount | model reconciliation | EXP-1008 handwritten-tip mismatch |
-| Missing receipt | `receiptPresence` | EXP-1018 $63 lunch, no receipt (required over $25) |
+| Missing receipt | `receiptPresence` | EXP-1018 $55 lunch, no receipt (required over $25) |
 | Wrong cost center / GL code | `costCenter` (dept→GL map) | EXP-1017 Marketing expense coded to Engineering |
-| Over $1,000 → always manager review | `amountLimit` | EXP-1019 $1,180 international flight |
-| Over $500 → beyond one-click | `amountLimit` | EXP-1020 $680 conference pass |
-| Possible duplicate → check past submissions | `duplicate` | EXP-1010/1011 Uber round-trip (legit); EXP-1014/1015 split bill (legit); **EXP-1021/1022 Notion — a true double-submission the model recommends rejecting** |
+| Over $1,000 → always manager review | `amountLimit` | EXP-1019 $1,027 international flight |
+| Over $500 → beyond one-click | `amountLimit` | EXP-1020 $593 conference pass |
+| Possible duplicate → check past submissions | `duplicate` | EXP-1010/1011 Ola round-trip (legit); EXP-1014/1015 split bill (legit); **EXP-1021/1022 Notion, a true double-submission the model recommends rejecting** |
 | Policy exception (discretion) | `policyCap` + model | EXP-1013 alcohol dinner; EXP-1009 client dinner |
 | Ambiguous receipt | model (vision) | EXP-1008; the real Goa receipts |
-| Foreign currency | `currency` + model FX | EXP-1012 EUR; EXP-1013–1016 INR |
-| **Wrong category (to dodge a cap)** | model | EXP-1023 — a $185 steakhouse dinner filed as "travel" (cap $500) instead of "meals" (cap $100) |
-| **Personal item on a receipt** | model (vision) | EXP-1024 — a hotel folio with a $18.99 in-room movie the model deducts (reimburse $195.01) |
-| **Receipt is a PDF, not a photo** | model (document) | EXP-1025 — a real Canva `.pdf` invoice the model reads and clears |
-| **Illegible / unreadable receipt** | model (vision) | EXP-1026 — a faded taxi receipt; the model reconciles the line items but flags the smudged total as unreadable instead of guessing |
-| **Cap-avoidance split** | `duplicate` + model | EXP-1027/1028 — one $186 steakhouse dinner split into two sub-$100 checks (same table, same card, 5 min apart) |
-| **Foreign-currency over-claim** | `currency` + model FX | EXP-1029 — a £140 London hotel claimed as $235; the model flags the implausible 1.68 implied rate |
-| **Receipt date ≠ claimed date** | model + guardrail | EXP-1030 — receipt dated Jul 2, claim says Jul 6; a code guardrail keeps a date mismatch from auto-clearing |
-| **Double gratuity** | model (vision) | EXP-1031 — an 18% service charge already included, plus a tip added on top |
+| Foreign currency | `currency` + model FX | EXP-1012 INR hotel folio; EXP-1013–1016 INR (the real Goa receipts); EXP-1029/1038 SGD |
+| **Wrong category (to dodge a cap)** | model | EXP-1023: a $161 barbecue dinner filed as "travel" (cap $500) instead of "meals" (cap $100) |
+| **Personal item on a receipt** | model (vision) | EXP-1024: a hotel folio with a ₹1,583 in-room movie (about $16.54) the model deducts (reimburse about $169.82) |
+| **Receipt is a PDF, not a photo** | model (document) | EXP-1025: a real Canva `.pdf` invoice the model reads and clears |
+| **Illegible / unreadable receipt** | model (vision) | EXP-1026: a faded auto-rickshaw receipt; the model reconciles the line items but flags the smudged total as unreadable instead of guessing |
+| **Cap-avoidance split** | `duplicate` + model | EXP-1027/1028: one $162 dinner split into two sub-$100 checks (same table, same card, 5 minutes apart) |
+| **Foreign-currency over-claim** | `currency` + model FX | EXP-1029: an S$225 Singapore hotel claimed as $235; the model flags the implausible 1.04 implied rate (a Singapore dollar is worth about $0.77) |
+| **Receipt date ≠ claimed date** | model + guardrail | EXP-1030: receipt dated Jul 2, claim says Jul 6; a code guardrail keeps a date mismatch from auto-clearing |
+| **Double gratuity** | model (vision) | EXP-1031: an 18% service charge already included, plus a tip added on top |
 | Under $500 & everything matches → one-click | all checks pass | EXP-1001–1007 auto-clear lane |
 
-Several of these — mis-categorization, a personal line item, a **true** double-submission (vs. a legitimate split or a round trip), a **cap-avoidance** split, an illegible total the model refuses to guess, a foreign-currency over-claim, and a file that **isn't a receipt** — are things a rules engine cannot judge; the model reads the receipt and reasons about intent. The PDF invoice case exercises the exact words "Photo or **PDF** upload" from the employee form (images go as image blocks, PDFs as native document blocks). The full queue is **38 cases**; a triage run clears **11** (about a third) and routes **27** to a human — the split is the product.
+Several of these are things a rules engine cannot judge: mis-categorization, a personal line item, a **true** double-submission (vs. a legitimate split or a round trip), a **cap-avoidance** split, an illegible total the model refuses to guess, a foreign-currency over-claim, and a file that **isn't a receipt**. The model reads the receipt and reasons about intent. The PDF invoice case exercises the exact words "Photo or **PDF** upload" from the employee form (images go as image blocks, PDFs as native document blocks). The full queue is **38 cases**; a triage run clears **11** (about a third) and routes **27** to a human. The split is the product.
 
-**Automatic currency conversion** and **not-a-receipt detection** are the two v3 additions worth calling out. Foreign receipts (INR, SGD, GBP, EUR) are converted to USD at reference rates in `data/policy.json`; small local expenses clear with the conversion shown, larger ones go to a human to confirm the rate, and a foreign *over-claim* (a £140 hotel claimed as $235) is caught because the receipt is read in its own currency. When the upload is a poster, a book, or a screenshot, the model returns `receiptMatch: "not_a_receipt"`, names what the file is, and refuses to fabricate an amount.
+**Automatic currency conversion** and **not-a-receipt detection** are the two v3 additions worth calling out. Foreign receipts (INR and SGD) are converted to USD at reference rates in `data/policy.json` (1 USD is about ₹95.7 and about S$1.29, set 2026-07-14); small local expenses clear with the conversion shown, larger ones go to a human to confirm the rate, and a foreign *over-claim* (an S$225 hotel claimed as $235) is caught because the receipt is read in its own currency. When the upload is a poster, a book, or a screenshot, the model returns `receiptMatch: "not_a_receipt"`, names what the file is, and refuses to fabricate an amount.
 
-The employee side (`/submit`) collapses the seven-screen form into one sentence + a photo: the same engine reads it, fills every field including **currency**, shows the extracted draft back to confirm (the PDF's "OCR'd amount shown back"), auto-picks the cost center, and drops it into the approver's queue.
+The employee side (`/submit`) collapses the seven-screen form into one sentence + a photo: the same engine reads it, fills every field including **currency**, shows the extracted draft back to confirm (the PDF's "OCR'd amount shown back"), auto-picks the cost center, and drops it into the approver's queue. A **Chat / Quick form** toggle adds a conversational path: a multi-turn chat gathers the details in plain language, then the same review card confirms everything before submission.
 
 ## Running it
 
@@ -64,8 +66,8 @@ cp .env.example .env.local   # add your ANTHROPIC_API_KEY
 npm run dev
 ```
 
-- `/` — approver view: the triage queue. Click **Run assistant triage**.
-- `/submit` — (optional employee side) describe an expense in one sentence + a receipt photo; the same engine fills the seven screens' worth of fields.
+- `/`: approver view, the triage queue. Click **Run assistant triage**.
+- `/submit`: the optional employee side. Describe an expense in one sentence + a receipt photo, or use chat mode; the same engine fills the seven screens' worth of fields.
 
 Without an API key the app runs in clearly-labeled **mock mode**: deterministic checks still run and route the queue, but no receipts are read. Reset the demo any time with the **Reset** button.
 
@@ -93,48 +95,48 @@ data/policy.json           │
                                              currency ⇒ needs_human. The model can
                                              tighten routing, never loosen it.
 ```
-(Store is Supabase in the deployed demo, in-memory locally — chosen by env vars.)
+(Store is Supabase in the deployed demo, in-memory locally, chosen by env vars.)
 
 ### Design decisions worth noticing
 
-1. **Deterministic code for money and metadata, LLM for judgment.** Policy-cap math, duplicate candidate detection, amount limits, and currency-mismatch flags are pure functions. The model never does arithmetic the code can do — it reads receipts, finds alcohol/non-reimbursable lines, reconciles foreign currency, explains, and drafts. The clearest proof: **a "no alcohol" check is impossible in code** (nothing in the structured claim says what was ordered), so it's entirely the model's job — and the routing guardrail refuses to auto-clear any receipt where the model found alcohol.
-2. **The model cannot approve its way past a failed check.** The guardrail in `lib/triage.ts` only lets the model make routing *stricter*. Auto-clear requires every deterministic check to pass, the model to be confident, the receipt to reconcile, no non-reimbursable items, and no unverifiable FX. (This is the fix for the original failure story — see `docs/failure-story/`.)
-3. **"What the assistant couldn't resolve" is a first-class output field.** The schema forces the model to enumerate its own uncertainty instead of papering over it — that list is the heart of the triage UI.
-4. **Line-item reconciliation is the signature.** When money must come off (alcohol, FX), the evidence panel shows a ledger — Claimed → deductions → Reimburse — so the approver sees the reduced amount, not just a flag.
-5. **Every AI action is audited**, and the **employee side reuses the same engine** — one extraction+reconciliation engine, two surfaces (approver triage, conversational submit).
+1. **Deterministic code for money and metadata, LLM for judgment.** Policy-cap math, duplicate candidate detection, amount limits, and currency-mismatch flags are pure functions. The model never does arithmetic the code can do; it reads receipts, finds alcohol/non-reimbursable lines, reconciles foreign currency, explains, and drafts. The clearest proof: **a "no alcohol" check is impossible in code** (nothing in the structured claim says what was ordered), so it's entirely the model's job, and the routing guardrail refuses to auto-clear any receipt where the model found alcohol.
+2. **The model cannot approve its way past a failed check.** The guardrail in `lib/triage.ts` only lets the model make routing *stricter*. Auto-clear requires every deterministic check to pass, the model to be confident, the receipt to reconcile, no non-reimbursable items, and no unverifiable FX. (This is the fix for the original failure story; see `docs/failure-story/`.)
+3. **"What the assistant couldn't resolve" is a first-class output field.** The schema forces the model to enumerate its own uncertainty instead of papering over it; that list is the heart of the triage UI.
+4. **Line-item reconciliation is the signature.** When money must come off (alcohol, FX), the evidence panel shows a ledger (Claimed → deductions → Reimburse) so the approver sees the reduced amount, not just a flag.
+5. **Every AI action is audited**, and the **employee side reuses the same engine**: one extraction+reconciliation engine, two surfaces (approver triage, conversational submit).
 
 ### Deliberately not built
 
-Auth, real email/Slack sends, payroll integration, editable policy, and a mobile-optimized approver *queue table* (the approver works at a desk — but the employee `/submit` flow is deliberately phone-first, and the case-review panel is fully mobile-readable, because those are where "from my phone" actually matters). The clean domestic receipts are synthetic (generated with Playwright — `scripts/generate-receipts.mjs`), including the deliberately tricky handwritten-tip case and a same-day identical-fare Uber pair. The hard cases use **real** receipt photos.
+Auth, real email/Slack sends, payroll integration, editable policy, and a mobile-optimized approver *queue table* (the approver works at a desk, but the employee `/submit` flow is deliberately phone-first, and the case-review panel is fully mobile-readable, because those are where "from my phone" actually matters). The clean receipts are synthetic (generated with Playwright, `scripts/generate-receipts.mjs`), including the deliberately tricky handwritten-tip case and a same-day identical-fare Ola pair. The hard cases use **real** receipt photos.
 
-### Design — "The Reconciliation Desk"
+### Design: "The Reconciliation Desk"
 
-The interface is designed as a calm, precise financial console rather than generic SaaS: Netchex-native slate-navy ink with a teal accent and a warm paper canvas with a faint desk-grid. Typography is **Apple SF Pro** — SF Pro Text for the UI, SF Pro Display for headings and hero numbers, with **tabular numerals** for every amount (the treatment Apple uses in Wallet, Stocks, and Numbers); a monospace is kept only for literal GL codes and key hints. The signature element is the **reconciliation ledger** in the evidence panel — Claimed → deductions → Reimburse — so the approver sees the reduced number, not just a flag. Details: a full **dark mode** (no-flash, respects system, manual toggle), a tactile **APPROVED stamp** on decisions, a **"$ recovered"** headline metric (money the assistant caught that shouldn't be reimbursed), keyboard navigation (`j`/`k`/`↵`), and motion that respects `prefers-reduced-motion`. The visual direction was developed with **Claude Design** (claude.ai/design) against a written brief and implemented here.
+The interface is designed as a calm, precise financial console rather than generic SaaS: Netchex-native slate-navy ink with a teal accent and a warm paper canvas with a faint desk-grid. Typography is **Apple SF Pro**: SF Pro Text for the UI, SF Pro Display for headings and hero numbers, with **tabular numerals** for every amount (the treatment Apple uses in Wallet, Stocks, and Numbers); a monospace is kept only for literal GL codes and key hints. The signature element is the **reconciliation ledger** in the evidence panel (Claimed → deductions → Reimburse) so the approver sees the reduced number, not just a flag. Details: a full **dark mode** (no-flash, respects system, manual toggle), a tactile **APPROVED stamp** on decisions, a **"$ recovered"** headline metric (money the assistant caught that shouldn't be reimbursed), keyboard navigation (`j`/`k`/`↵`), and motion that respects `prefers-reduced-motion`. The visual direction was developed with **Claude Design** (claude.ai/design) against a written brief and implemented here.
 
 **Designed to not make you think.** The whole app is built against the Laws of UX and Nielsen's heuristics, corner to corner:
 
-- **Onboarding & recognition** — a first-run banner with one clear CTA and a 3-step "how it works"; example prompts on the employee form; a `?` keyboard-shortcut overlay. Nobody needs a manual (Paradox of the Active User, Recognition-over-Recall).
-- **Flow for the approver** — open a case, decide with a **sticky always-reachable Approve/Request-info/Reject bar** (Fitts), and **auto-advance to the next case**; `a`/`r` to decide, `←/→` and `j/k` to move. Clear the whole review lane without touching the mouse.
-- **System status** — skeleton rows on load, a live triage progress bar, per-row "investigating…" shimmer, and a count-up on the "$ recovered" metric (Doherty <400ms feel).
-- **User control & recovery** — every decision raises a toast with **Undo** (real revert, audited); errors offer **Retry**; resolved cases can be moved back to review (Nielsen #3/#9, Peak-End).
-- **Findability without overwhelm** — search + flag-filter chips with counts and tooltips, lane count badges; the queue leads with the assistant's one-line rationale so the eye lands on the decision, not the chrome (Hick, Von Restorff).
-- **A satisfying end** — an "all caught up" inbox-zero state with the session's tally; a warm "sent to approvals" success on submit (Peak-End, Zeigarnik).
+- **Onboarding & recognition**: a first-run banner with one clear CTA and a 3-step "how it works"; example prompts on the employee form; a `?` keyboard-shortcut overlay. Nobody needs a manual (Paradox of the Active User, Recognition-over-Recall).
+- **Flow for the approver**: open a case, decide with a **sticky always-reachable Approve/Request-info/Reject bar** (Fitts), and **auto-advance to the next case**; `a`/`r` to decide, `←/→` and `j/k` to move. Clear the whole review lane without touching the mouse.
+- **System status**: skeleton rows on load, a live triage progress bar, per-row "investigating…" shimmer, and a count-up on the "$ recovered" metric (Doherty <400ms feel).
+- **User control & recovery**: every decision raises a toast with **Undo** (real revert, audited); errors offer **Retry**; resolved cases can be moved back to review (Nielsen #3/#9, Peak-End).
+- **Findability without overwhelm**: search + flag-filter chips with counts and tooltips, lane count badges; the queue leads with the assistant's one-line rationale so the eye lands on the decision, not the chrome (Hick, Von Restorff).
+- **A satisfying end**: an "all caught up" inbox-zero state with the session's tally; a warm "sent to approvals" success on submit (Peak-End, Zeigarnik).
 
-> **Font licensing note:** the SF Pro web fonts are subset to `app/fonts/*.woff2`. Apple's SF fonts are free to use in UI design but their license restricts web-embedding to Apple-platform apps — fine for this private prototype, but before making the repo public or shipping to real users, swap SF Pro for a licensed web equivalent (e.g. Inter, or an Apple-licensed webfont). One-line change in `app/layout.tsx`.
+> **Font licensing note:** the SF Pro web fonts are subset to `app/fonts/*.woff2`. Apple's SF fonts are free to use in UI design but their license restricts web-embedding to Apple-platform apps. Fine for this private prototype, but before making the repo public or shipping to real users, swap SF Pro for a licensed web equivalent (e.g. Inter, or an Apple-licensed webfont). One-line change in `app/layout.tsx`.
 
 ### Deployment notes (Vercel + Supabase)
 
-The deployed demo swaps the in-memory store for **Supabase** (Postgres for expense state, Storage for uploaded receipts) because Vercel lambdas are stateless — the backend is chosen by env vars, so `npm run dev` with no Supabase config still works in-memory. Three things a public AI demo needs that localhost doesn't:
+The deployed demo swaps the in-memory store for **Supabase** (Postgres for expense state, Storage for uploaded receipts) because Vercel lambdas are stateless; the backend is chosen by env vars, so `npm run dev` with no Supabase config still works in-memory. Three things a public AI demo needs that localhost doesn't:
 
-- **Cost guardrails** — global hourly caps on model calls (atomic SQL counter, `bump_counter`), so an unattended public URL can't burn the API budget. Friendly 429 when the budget is spent.
-- **Timeouts sized for vision calls** — `maxDuration = 120` on the model routes; Opus reading a receipt with thinking enabled is a 10–30s call.
-- **Receipt files traced into the lambda** — `outputFileTracingIncludes` so seeded receipt images are readable server-side on Vercel.
+- **Cost guardrails**: global hourly caps on model calls (atomic SQL counter, `bump_counter`), so an unattended public URL can't burn the API budget. Friendly 429 when the budget is spent.
+- **Timeouts sized for vision calls**: `maxDuration = 120` on the model routes; Opus reading a receipt with thinking enabled is a 10–30s call.
+- **Receipt files traced into the lambda**: `outputFileTracingIncludes` so seeded receipt images are readable server-side on Vercel.
 
 Env vars: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Schema in `supabase/migrations/`.
 
 ### What I'd measure in production
 
-- **% auto-cleared** (leverage) and **time-to-decision** (the point of the product)
-- **Re-review loop rate** — how often "request info" resolves in one round-trip because the drafted ask was specific
-- **False-approve rate** as the guardrail metric — this is payroll money; the auto-clear lane earns trust or it doesn't
+- **% auto-cleared** (the volume win) and **time-to-decision** (the point of the product)
+- **Re-review loop rate**: how often "request info" resolves in one round-trip because the drafted ask was specific
+- **False-approve rate** as the guardrail metric: this is payroll money; the auto-clear lane earns trust or it doesn't
 - Receipt-extraction disagreement rate (model vs claim) as a drift signal
