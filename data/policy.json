@@ -1,0 +1,33 @@
+{
+  "claimCurrency": "USD",
+  "categoryCaps": {
+    "meals": 100,
+    "travel": 500,
+    "lodging": 250,
+    "software": 200,
+    "other": 100
+  },
+  "receiptRequiredAbove": 25,
+  "autoApproveLimit": 500,
+  "hardReviewLimit": 1000,
+  "duplicateWindowDays": 3,
+  "fxToUsd": {
+    "USD": 1,
+    "INR": 0.01045,
+    "SGD": 0.7728
+  },
+  "fxNote": "Live mid-market reference rates (as of 2026-07-14) to convert a foreign receipt to USD, the claim currency (1 USD is about 95.7 INR and about 1.294 SGD). FlowCo reimburses in USD; the team pays in local currency (INR, some SGD) and the assistant converts automatically at these rates, then flags any claim that does not match the converted receipt.",
+  "reimbursement": {
+    "alcohol": "not_reimbursable",
+    "note": "Alcohol is never reimbursable. When a receipt includes alcohol, deduct the alcohol line(s) plus their tax and reimburse only the remainder."
+  },
+  "notes": [
+    "Category caps are per expense. Lodging cap is per night.",
+    "Receipts are required for any expense over $25.",
+    "Expenses under $500 with all checks passing may be cleared in one click.",
+    "Anything over $1,000 always requires manager review.",
+    "Client entertainment above the meals cap may be approved at the approver's discretion with a documented business purpose.",
+    "Employees expense in USD; receipts from travel may be in a foreign currency, in which case the FX conversion must be sanity-checked before approval.",
+    "Alcohol is not reimbursable and must be excluded from the reimbursable amount."
+  ]
+}

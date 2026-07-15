@@ -1,0 +1,165 @@
+import { costCenterFor, UNKNOWN_COST_CENTER } from "./costCenters";
+import type { DeterministicChecks, Expense, Policy } from "./types";
+
+// Pure, deterministic checks. No LLM involvement — money math and duplicate
+// detection stay in code. Any fail/warn here forces the case to a human
+// regardless of what the model concludes.
+
+const money = (n: number) => `$${n.toFixed(2)}`;
+// A fx rate reads naturally as units-per-USD (95.7 INR, 1.294 SGD) — never as
+// a 2-decimal dollar amount, which rounds 0.01045 into a misleading "$0.01".
+const perUsd = (rateToUsd: number) => {
+  const units = 1 / rateToUsd;
+  return units >= 10 ? units.toFixed(1) : units.toFixed(3);
+};
+
+export function runChecks(expense: Expense, all: Expense[], policy: Policy): DeterministicChecks {
+  return {
+    policyCap: policyCapCheck(expense, policy),
+    receiptPresence: receiptPresenceCheck(expense, policy),
+    duplicate: duplicateCheck(expense, all, policy),
+    amountLimit: amountLimitCheck(expense, policy),
+    currency: currencyCheck(expense, policy),
+    costCenter: costCenterCheck(expense),
+  };
+}
+
+function costCenterCheck(expense: Expense) {
+  const expected = costCenterFor(expense.employee.department);
+  // Compare on the CC code prefix so label variations don't cause noise.
+  const code = (s: string) => s.trim().split(/\s+/)[0];
+  const mismatch = expected !== UNKNOWN_COST_CENTER && code(expense.costCenter) !== code(expected);
+  return {
+    status: mismatch ? ("warn" as const) : ("pass" as const),
+    expected,
+    actual: expense.costCenter,
+    note: mismatch
+      ? `Coded to ${expense.costCenter}, but ${expense.employee.name.split(" ")[0]} is in ${expense.employee.department} (${expected}) — likely a wrong pick`
+      : `Cost center ${expense.costCenter} matches ${expense.employee.department}`,
+  };
+}
+
+function policyCapCheck(expense: Expense, policy: Policy) {
+  const cap = Object.hasOwn(policy.categoryCaps, expense.category)
+    ? policy.categoryCaps[expense.category]
+    : undefined;
+  // An unknown category must not crash a check; route it to a person instead.
+  if (cap === undefined) {
+    return {
+      status: "warn" as const,
+      cap: 0,
+      total: expense.total,
+      overBy: 0,
+      note: `No cap on file for category "${expense.category}" — a person needs to sort it`,
+    };
+  }
+  const overBy = Math.max(0, expense.total - cap);
+  const over = overBy > 0.005;
+  return {
+    status: over ? ("fail" as const) : ("pass" as const),
+    cap,
+    total: expense.total,
+    overBy: Number(overBy.toFixed(2)),
+    note: over
+      ? `${money(expense.total)} is over the ${expense.category} cap of ${money(cap)} by ${money(overBy)}`
+      : `${money(expense.total)} is within the ${expense.category} cap of ${money(cap)}`,
+  };
+}
+
+function receiptPresenceCheck(expense: Expense, policy: Policy) {
+  const required = expense.total > policy.receiptRequiredAbove;
+  const present = expense.receiptUrl !== null;
+  const missing = required && !present;
+  return {
+    status: missing ? ("fail" as const) : ("pass" as const),
+    required,
+    present,
+    note: missing
+      ? `A receipt is required over ${money(policy.receiptRequiredAbove)}, but none is attached`
+      : !present
+        ? `No receipt, and none needed under ${money(policy.receiptRequiredAbove)}`
+        : "Receipt attached",
+  };
+}
+
+function duplicateCheck(expense: Expense, all: Expense[], policy: Policy) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const date = new Date(expense.transactionDate).getTime();
+  // Flag two patterns for a human glance, and let the model characterize which:
+  //  - same day, same merchant, same employee → possible split bill OR same-day
+  //    re-submission (different or identical amounts).
+  //  - same merchant, same employee, identical amount within the window →
+  //    a delayed re-submission of the same bill.
+  // A different-amount purchase from the same merchant on a *different* day is
+  // just normal repeat business, not a duplicate — don't flag it.
+  const matches = all.filter((other) => {
+    if (other.id === expense.id) return false;
+    if (other.employee.email !== expense.employee.email) return false;
+    if (other.merchant.toLowerCase() !== expense.merchant.toLowerCase()) return false;
+    const sameDay = other.transactionDate === expense.transactionDate;
+    const amountMatch = Math.abs(other.total - expense.total) < 0.005;
+    const withinWindow =
+      Math.abs(new Date(other.transactionDate).getTime() - date) <= policy.duplicateWindowDays * dayMs;
+    return sameDay || (amountMatch && withinWindow);
+  });
+  const candidates = matches.map((o) => o.id);
+  const exactAmount = matches.some((o) => Math.abs(o.total - expense.total) < 0.005);
+  return {
+    status: candidates.length > 0 ? ("warn" as const) : ("pass" as const),
+    candidateIds: candidates,
+    note:
+      candidates.length === 0
+        ? "No duplicate candidates found"
+        : exactAmount
+          ? `Same person, shop, and amount within ${policy.duplicateWindowDays} days — could be sent twice: ${candidates.join(", ")}`
+          : `Same person and shop within ${policy.duplicateWindowDays} days, different amounts — could be a split or a double: ${candidates.join(", ")}`,
+  };
+}
+
+function amountLimitCheck(expense: Expense, policy: Policy) {
+  const status =
+    expense.total > policy.hardReviewLimit
+      ? ("fail" as const)
+      : expense.total > policy.autoApproveLimit
+        ? ("warn" as const)
+        : ("pass" as const);
+  return {
+    status,
+    autoApproveLimit: policy.autoApproveLimit,
+    hardReviewLimit: policy.hardReviewLimit,
+    note:
+      status === "fail"
+        ? `Over the ${money(policy.hardReviewLimit)} line — always goes to a manager`
+        : status === "warn"
+          ? `Over the ${money(policy.autoApproveLimit)} one-click line`
+          : `Under the ${money(policy.autoApproveLimit)} one-click line`,
+  };
+}
+
+function currencyCheck(expense: Expense, policy: Policy) {
+  const foreign = expense.receiptCurrency !== policy.claimCurrency;
+  if (!foreign) {
+    return { status: "pass" as const, note: `Receipt and claim are both in ${policy.claimCurrency}` };
+  }
+  const rate = policy.fxToUsd?.[expense.receiptCurrency];
+  // A known reference rate is a mention, not a blocker. Code converts, the
+  // conversion is shown on the case, and the model separately sanity-checks
+  // the claim's implied rate (an over-claim still stops the case). Only a
+  // currency with no rate on file needs a person to convert.
+  if (rate !== undefined) {
+    return {
+      status: "pass" as const,
+      note: `Receipt is in ${expense.receiptCurrency}; auto-converted to ${money(expense.total)} at the reference rate (${perUsd(rate)} ${expense.receiptCurrency} per USD).`,
+    };
+  }
+  return {
+    status: "warn" as const,
+    note: `Receipt is in ${expense.receiptCurrency}, the claim is in ${policy.claimCurrency}, and no rate is on file — a person needs to convert it.`,
+  };
+}
+
+// The routing guardrail: code decides whether a human must look, the model
+// never gets to override a failed or warned check.
+export function checksRequireHuman(checks: DeterministicChecks): boolean {
+  return Object.values(checks).some((c) => c.status === "fail" || c.status === "warn");
+}

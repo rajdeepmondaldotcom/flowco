@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+/*
+  FlowCo Approvals Triage — "The Reconciliation Desk"
+  A calm, precise financial-console aesthetic: slate-navy ink, teal accent,
+  warm paper canvas, IBM Plex Sans + Mono (tabular ledger figures).
+  Semantic tokens switch by theme; dark mode via prefers-color-scheme and a
+  manual [data-theme] override that always wins.
+*/
+
+:root {
+  /* light — the desk */
+  --paper: #f3f2ec;
+  --surface: #ffffff;
+  --surface-2: #faf9f4;
+  --ink: #111820;
+  --ink-soft: #495663;
+  --ink-faint: #5f6a76; /* ≥4.5:1 on paper and surface (WCAG AA normal text) */
+  --line: #e6e3da;
+  --line-strong: #d3cfc4;
+
+  --accent: #0c6e6b;
+  --accent-soft: #e0edec;
+  --clear: #1a7a49;
+  --clear-soft: #e6f2ea;
+  --flag: #a2621c;
+  --flag-soft: #f7ecda;
+  --danger: #a83226;
+  --danger-soft: #f6e7e3;
+  --neutral-chip: #eae7df;
+  --stamp: #927234;
+
+  --shadow-sm: 0 1px 2px rgba(23, 33, 45, 0.06), 0 1px 1px rgba(23, 33, 45, 0.04);
+  --shadow-md: 0 4px 16px rgba(23, 33, 45, 0.08), 0 1px 3px rgba(23, 33, 45, 0.05);
+  --shadow-lg: 0 24px 60px rgba(15, 22, 32, 0.24), 0 4px 12px rgba(15, 22, 32, 0.1);
+  --ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d131a;
+    --surface: #151d27;
+    --surface-2: #1b2531;
+    --ink: #eaeef3;
+    --ink-soft: #a4afbc;
+    --ink-faint: #828e9c; /* ≥4.5:1 on all dark surfaces (WCAG AA normal text) */
+    --line: #26303d;
+    --line-strong: #34404f;
+
+    --accent: #3bb3a8;
+    --accent-soft: #123230;
+    --clear: #45c17e;
+    --clear-soft: #112a1e;
+    --flag: #d89f54;
+    --flag-soft: #2d2413;
+    --danger: #e6796c;
+    --danger-soft: #331c19;
+    --neutral-chip: #212b37;
+    --stamp: #c9a860;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+    --ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #0d131a;
+  --surface: #151d27;
+  --surface-2: #1b2531;
+  --ink: #eaeef3;
+  --ink-soft: #a4afbc;
+  --ink-faint: #828e9c; /* ≥4.5:1 on all dark surfaces (WCAG AA normal text) */
+  --line: #26303d;
+  --line-strong: #34404f;
+
+  --accent: #3bb3a8;
+  --accent-soft: #123230;
+  --clear: #45c17e;
+  --clear-soft: #112a1e;
+  --flag: #d89f54;
+  --flag-soft: #2d2413;
+  --danger: #e6796c;
+  --danger-soft: #331c19;
+  --neutral-chip: #212b37;
+  --stamp: #c9a860;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+@theme {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-clear: var(--clear);
+  --color-clear-soft: var(--clear-soft);
+  --color-flag: var(--flag);
+  --color-flag-soft: var(--flag-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-neutral-chip: var(--neutral-chip);
+  --color-stamp: var(--stamp);
+
+  --font-sans: var(--font-sf-text), -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sf-display), var(--font-sf-text), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.006em; /* SF Pro breathes best with a hair of negative tracking */
+}
+
+/* Large headings & hero numbers use SF Pro Display */
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
+}
+
+/* A faint desk grid — texture without noise */
+.desk-canvas {
+  background-color: var(--paper);
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ink) 4%, transparent) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+
+/* Ledger figures — money, dates, ids. SF Pro tabular numerals (the Apple
+   Wallet / Stocks treatment): premium, aligned, unmistakably numeric. */
+.figure {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: -0.006em;
+}
+
+/* Literal system codes (GL / cost-center) and key hints stay monospace. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.688rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.lane-rail {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Focus — a considered ring, not the browser default */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 4px;
+}
+
+/* Dialog containers receive programmatic focus (focus trap) but aren't
+   interactive controls — no ring around the whole panel. Restore the
+   element's own Tailwind shadow utilities instead of the focus ring. */
+[role="dialog"][tabindex="-1"]:focus-visible {
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000);
+}
+
+/* The approval stamp — one tactile moment */
+.stamp {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  border: 2px solid color-mix(in srgb, var(--stamp) 60%, transparent);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  transform: rotate(-4deg);
+  opacity: 0.9;
+}
+
+/* ---- Motion ---- */
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.row-in { animation: row-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.panel-in { animation: panel-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in { animation: fade-in 0.2s ease-out both; }
+
+/* Reconciling shimmer — a row the assistant is actively working */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.reconciling {
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--accent) 8%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.pulse-soft { animation: pulse-soft 1.4s ease-in-out infinite; }
+
+.shadow-float {
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-in { animation: toast-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes stamp-in {
+  0% { opacity: 0; transform: rotate(-4deg) scale(1.4); }
+  60% { opacity: 1; transform: rotate(-4deg) scale(0.94); }
+  100% { opacity: 0.9; transform: rotate(-4deg) scale(1); }
+}
+.stamp-in { animation: stamp-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .row-in, .panel-in, .fade-in, .reconciling, .pulse-soft, .stamp-in, .toast-in {
+    animation: none;
+  }
+}
